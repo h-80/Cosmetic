@@ -11,19 +11,28 @@
         :root { --pink: #880e4f; --accent: #ad1457; --gray: #f8f9fa; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; outline: none; }
         body { background: #fdfdfd; margin: 0; color: #333; padding-bottom: 50px; }
+        
         .profile-header { height: 180px; background: linear-gradient(45deg, var(--pink), var(--accent)); border-radius: 0 0 30px 30px; position: relative; }
+        
         .avatar-container { position: relative; width: 130px; height: 130px; margin: -65px auto 0; }
         #userAvatar { width: 130px; height: 130px; border-radius: 50%; border: 5px solid white; object-fit: cover; background: #eee; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        
         .edit-avatar-btn { position: absolute; bottom: 5px; right: 5px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; border: none; font-size: 18px; }
+        
         .profile-details { text-align: center; padding: 15px 20px; }
         h2 { margin: 10px 0 5px; font-weight: 800; }
         .store-name { color: var(--pink); font-weight: 700; font-size: 15px; display: block; margin-bottom: 10px; }
+        
+        /* واجهة الزائر */
         .visitor-actions { display: none; padding: 20px; gap: 10px; }
         .btn-message { flex: 1; background: var(--pink); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        
+        /* واجهة صاحب الحساب */
         .owner-settings { display: block; padding: 20px; }
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; font-size: 12px; color: #777; margin-bottom: 5px; }
         .input-group input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; background: white; }
+        
         .save-btn { background: #2e7d32; color: white; border: none; width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; }
         .mode-switcher { position: fixed; bottom: 10px; left: 10px; background: #333; color: white; padding: 5px 10px; border-radius: 20px; font-size: 10px; cursor: pointer; }
     </style>
@@ -38,41 +47,52 @@
             <button class="edit-avatar-btn" id="editAvatarBtn" onclick="document.getElementById('avatarInput').click()">✎</button>
         </div>
         <div class="profile-details">
-            <h2 id="dispName">اسم المستخدم</h2>
+            <h2 id="dispName">جاري التحميل...</h2>
             <span class="store-name" id="dispStore">الملف الشخصي</span>
         </div>
     </div>
 
     <div id="visitorView" class="visitor-actions">
-        <a id="msgLink" href="#" class="btn-message">✉ مراسلة الآن</a>
+        <a id="msgLink" href="#" class="btn-message">✉ مراسلة صاحب الحساب</a>
     </div>
 
     <div id="ownerView" class="owner-settings">
         <div class="input-group"><label>اسم المستخدم</label><input type="text" id="inName"></div>
-        <div class="input-group"><label>رقم الموبايل (لا يمكن تغييره)</label><input type="tel" id="inPhone" readonly style="background:#f0f0f0;"></div>
+        <div class="input-group"><label>رقم الموبايل (أساسي)</label><input type="tel" id="inPhone" readonly style="background:#f0f0f0;"></div>
         <div class="input-group"><label>رقم الواتساب للتواصل</label><input type="tel" id="inWa"></div>
         <button class="save-btn" id="saveBtn" onclick="saveProfile()">حفظ التعديلات</button>
     </div>
 
-    <div class="mode-switcher" onclick="toggleViewMode()">تبديل العرض</div>
+    <div class="mode-switcher" onclick="location.href='index.html'" style="background: var(--pink);">الرجوع للمتجر</div>
 
     <script>
-        const userPhone = localStorage.getItem('app_user_phone');
-        if (!userPhone) location.href = 'login.html';
+        const myPhone = localStorage.getItem('app_user_phone');
+        if (!myPhone) location.href = 'login.html';
 
         const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
 
         window.onload = function() {
-            // جلب بياناتي الشخصية فقط بناءً على رقم موبايلي
-            db.ref('users/' + userPhone).once('value', snap => {
+            // التحقق هل الزيارة لبروفايل شخص آخر أم لبروفايلي الشخصي
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetPhone = urlParams.get('id') || myPhone;
+
+            db.ref('users/' + targetPhone).once('value', snap => {
                 const data = snap.val() || {};
                 document.getElementById('dispName').innerText = data.name || "مستخدم جديد";
                 document.getElementById('inName').value = data.name || "";
-                document.getElementById('inPhone').value = userPhone;
-                document.getElementById('inWa').value = data.wa || userPhone;
+                document.getElementById('inPhone').value = targetPhone;
+                document.getElementById('inWa').value = data.wa || targetPhone;
                 if(data.img) document.getElementById('userAvatar').src = data.img;
+
+                // منطق العرض: إذا كان الحساب ليس لي
+                if (targetPhone !== myPhone) {
+                    document.getElementById('ownerView').style.display = 'none';
+                    document.getElementById('editAvatarBtn').style.display = 'none';
+                    document.getElementById('visitorView').style.display = 'flex';
+                    document.getElementById('msgLink').href = "https://wa.me/" + (data.wa || targetPhone);
+                }
             });
         };
 
@@ -91,24 +111,14 @@
                 name: document.getElementById('inName').value,
                 wa: document.getElementById('inWa').value,
                 img: document.getElementById('userAvatar').src,
-                phone: userPhone
+                phone: myPhone
             };
             
-            // الحفظ في المسار الخاص بالمستخدم فقط
-            db.ref('users/' + userPhone).update(data).then(() => {
+            db.ref('users/' + myPhone).update(data).then(() => {
                 document.getElementById('dispName').innerText = data.name;
                 btn.innerText = "حفظ التعديلات";
-                alert("تم تحديث ملفك الشخصي!");
+                alert("تم تحديث بياناتك بنجاح!");
             });
-        }
-
-        let isOwner = true;
-        function toggleViewMode() {
-            isOwner = !isOwner;
-            document.getElementById('ownerView').style.display = isOwner ? 'block' : 'none';
-            document.getElementById('editAvatarBtn').style.display = isOwner ? 'flex' : 'none';
-            document.getElementById('visitorView').style.display = isOwner ? 'none' : 'flex';
-            if(!isOwner) document.getElementById('msgLink').href = "https://wa.me/" + document.getElementById('inWa').value;
         }
     </script>
 </body>
