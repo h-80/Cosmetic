@@ -11,27 +11,40 @@
         :root { --pink: #880e4f; --accent: #ad1457; --gray: #f8f9fa; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
         body { background: #fff; margin: 0; padding-bottom: 20px; color: #333; overflow-x: hidden; }
+        
         header { background: var(--pink); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
         .header-controls { display: flex; align-items: center; gap: 10px; }
         .profile-nav-icon { width: 35px; height: 35px; border-radius: 50%; border: 2px solid white; object-fit: cover; cursor: pointer; transition: 0.3s; }
-        .profile-nav-icon:hover { transform: scale(1.1); }
+        
         #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; padding: 12px; }
         .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; position: relative; }
         .card img { width: 100%; height: 180px; object-fit: cover; cursor: pointer; }
         .card-title { padding: 10px; font-weight: 700; font-size: 13px; text-align: center; }
-        .admin-btn { position: absolute; top: 8px; background: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 10; display: none; } /* مخفية افتراضياً */
+        
+        .admin-btn { position: absolute; top: 8px; background: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 10; display: none; }
         .del-btn { left: 8px; color: #d32f2f; }
         .edit-btn { left: 45px; color: #1976d2; }
+
+        /* ستايل بطاقة الناشر الجديد */
+        .owner-card { display: flex; align-items: center; gap: 10px; background: #fffcfd; padding: 10px; border-radius: 15px; margin-bottom: 15px; cursor: pointer; border: 1px solid #fce4ec; transition: 0.2s; }
+        .owner-card:active { transform: scale(0.98); background: #fce4ec; }
+        .owner-img-small { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--pink); }
+        .owner-info-text { display: flex; flex-direction: column; }
+        .owner-info-text .label { font-size: 11px; color: #888; }
+        .owner-info-text .name { font-size: 14px; font-weight: 700; color: var(--pink); }
+
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
         .modal-box { background: white; padding: 25px; border-radius: 25px; width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
         input, textarea, select { width: 100%; margin-top: 10px; padding: 14px; border: 1px solid #ddd; border-radius: 12px; font-size: 14px; }
         .btn-pub { background: var(--pink); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: 700; margin-top: 20px; cursor: pointer; }
+        
         #detailsScreen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 3000; overflow-y: auto; }
         .slider { display: flex; overflow-x: auto; height: 400px; background: #000; snap-type: x mandatory; }
         .slider img { flex: 0 0 100%; width: 100%; object-fit: contain; snap-align: start; }
         .dots { display: flex; justify-content: center; gap: 6px; padding: 10px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; }
         .dot.active { background: var(--pink); width: 20px; border-radius: 10px; }
+        
         .v-body { padding: 20px; border-radius: 30px 30px 0 0; background: white; margin-top: -30px; position: relative; box-shadow: 0 -10px 20px rgba(0,0,0,0.05); }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 12px; display: flex; gap: 10px; box-shadow: 0 -5px 20px rgba(0,0,0,0.08); }
         .btn-act { flex: 1; text-align: center; padding: 14px; border-radius: 12px; color: white; text-decoration: none; font-weight: 700; font-size: 14px; }
@@ -74,6 +87,15 @@
     <div class="slider" id="vSlider"></div>
     <div class="dots" id="vDots"></div>
     <div class="v-body">
+        
+        <div class="owner-card" onclick="viewOwnerProfile()">
+            <img id="vOwnerImg" src="https://via.placeholder.com/45" class="owner-img-small">
+            <div class="owner-info-text">
+                <span class="label">صاحب المنتج:</span>
+                <span id="vOwnerName" class="name">جاري التحميل...</span>
+            </div>
+        </div>
+
         <div id="vStatus" style="display:inline-block; padding:5px 12px; border-radius:8px; font-size:12px; font-weight:700; margin-bottom:12px;"></div>
         <div id="vTitle" style="font-size:24px; font-weight:800; margin-bottom:5px;"></div>
         <div id="vPrice" style="font-size:20px; color:var(--pink); font-weight:800; margin-bottom:15px;"></div>
@@ -94,8 +116,9 @@
     firebase.initializeApp(config);
     const db = firebase.database();
     let currentEditId = null;
+    let currentProductOwner = "";
 
-    // تحديث صورة الهيدر من بيانات المستخدم الحالي فقط
+    // تحديث صورة البروفايل في الهيدر
     db.ref('users/' + userPhone).on('value', snap => {
         const u = snap.val();
         if(u && u.img) document.getElementById('navProfileImg').src = u.img;
@@ -139,7 +162,7 @@
             status: document.getElementById('pStatus').value,
             phone: document.getElementById('pPhone').value,
             whatsapp: document.getElementById('pWhatsapp').value,
-            owner: userPhone, // ربط المنتج برقم هاتفك
+            owner: userPhone,
             time: Date.now()
         };
         const file = document.getElementById('pCover').files[0];
@@ -175,7 +198,6 @@
             const d = child.val(); const id = child.key;
             const card = document.createElement('div');
             card.className = 'card';
-            // التحكم في ظهور أزرار الإدارة
             const isAdmin = (d.owner === userPhone);
             card.innerHTML = `
                 <button class="admin-btn del-btn" style="display:${isAdmin?'flex':'none'}" onclick="event.stopPropagation(); deleteItem('${id}')">✕</button>
@@ -191,6 +213,8 @@
     function openDetails(id) {
         db.ref('products/' + id).once('value', snap => {
             const data = snap.val();
+            currentProductOwner = data.owner;
+
             const s = document.getElementById('vSlider'); const dots = document.getElementById('vDots');
             s.innerHTML = ''; dots.innerHTML = '';
             const imgs = data.album || [data.image];
@@ -198,20 +222,29 @@
                 s.innerHTML += `<img src="${img}">`;
                 dots.innerHTML += `<div class="dot ${i==0?'active':''}"></div>`;
             });
-            s.onscroll = () => {
-                const idx = Math.round(s.scrollLeft / s.offsetWidth);
-                document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i == idx));
-            };
+
+            // جلب بيانات الناشر للبطاقة
+            db.ref('users/' + data.owner).once('value', uSnap => {
+                const uData = uSnap.val() || {};
+                document.getElementById('vOwnerName').innerText = uData.name || "مستخدم";
+                document.getElementById('vOwnerImg').src = uData.img || "https://via.placeholder.com/45";
+            });
+
             document.getElementById('vTitle').innerText = data.title;
             document.getElementById('vPrice').innerText = data.price ? data.price + " " + data.currency : "";
             document.getElementById('vDesc').innerText = data.desc;
             const st = document.getElementById('vStatus');
             st.innerText = data.status; st.style.background = data.status=="متوفر"?"#e8f5e9":"#ffebee"; st.style.color = data.status=="متوفر"?"#2e7d32" : "#c62828";
-            document.getElementById('linkWa').href = "https://wa.me/" + (data.whatsapp || "");
-            document.getElementById('linkPh').href = "tel:" + (data.phone || "");
+            
+            document.getElementById('linkWa').href = "https://wa.me/" + (data.whatsapp || data.owner);
+            document.getElementById('linkPh').href = "tel:" + (data.phone || data.owner);
             document.getElementById('detailsScreen').style.display = 'block';
             window.history.pushState({p:1}, '');
         });
+    }
+
+    function viewOwnerProfile() {
+        if(currentProductOwner) location.href = `profile.html?id=${currentProductOwner}`;
     }
 
     window.onpopstate = () => document.querySelectorAll('.modal, #detailsScreen').forEach(m => m.style.display='none');
