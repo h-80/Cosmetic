@@ -8,58 +8,51 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
+        /* تصميمك الأصلي للهيدر الملون والصورة الكبيرة */
         :root { --pink: #880e4f; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
-        body { background: #fff; margin: 0; text-align: center; }
-        /* تصميم الهيدر الملون كما في صورتك */
-        .header-bg { height: 180px; background: var(--pink); border-radius: 0 0 30px 30px; }
+        body { background: #fff; margin: 0; text-align: center; padding-bottom: 100px; }
+        .header-bg { height: 180px; background: var(--pink); border-radius: 0 0 30px 30px; position: relative; }
         .avatar { width: 130px; height: 130px; border-radius: 50%; border: 5px solid #fff; margin-top: -65px; object-fit: cover; background: #eee; }
         .info { padding: 20px; }
-        .actions { position: fixed; bottom: 0; width: 100%; display: flex; padding: 15px; gap: 8px; background: #fff; }
-        .btn { flex: 1; padding: 14px; border-radius: 12px; color: #fff; text-decoration: none; font-weight: 700; font-size: 13px; border: none; cursor: pointer; }
+        .visitor-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; gap: 8px; box-shadow: 0 -5px 20px rgba(0,0,0,0.08); }
+        .btn-act { flex: 1; color: white; padding: 14px; border-radius: 12px; font-weight: 700; text-align: center; text-decoration: none; font-size: 13px; border: none; }
     </style>
 </head>
 <body>
-
-<div class="header-bg">
-    <a href="index.html" style="color:#fff; position:absolute; top:20px; right:20px; text-decoration:none;">✕</a>
-</div>
-
-<img id="uImg" class="avatar" src="https://via.placeholder.com/130">
-<div class="info">
-    <h2 id="uName">...</h2>
-    <p style="color:var(--pink); font-weight:700;">عضو في كوزمتك</p>
-</div>
-
-<div id="vNav" class="actions" style="display:none;">
-    <a id="vWa" class="btn" style="background:#25d366;">واتساب</a>
-    <a id="vPh" class="btn" style="background:#007bff;">اتصال</a>
-    <button onclick="toChat()" class="btn" style="background:var(--pink);">مراسلة</button>
-</div>
-
-<script>
-    const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
-    firebase.initializeApp(config);
-    const db = firebase.database();
-    const my = localStorage.getItem('app_user_phone');
-    let tid = new URLSearchParams(window.location.search).get('id') || my;
-
-    db.ref('users/'+tid).once('value', s => {
-        let d = s.val() || {};
-        document.getElementById('uName').innerText = d.name || "مستخدم";
-        if(d.img) document.getElementById('uImg').src = d.img;
-        
-        if(tid !== my) {
-            document.getElementById('vNav').style.display = 'flex';
-            document.getElementById('vWa').href = "https://wa.me/"+tid;
-            document.getElementById('vPh').href = "tel:"+tid;
+    <div class="header-bg">
+        <a href="index.html" style="color:#fff; position:absolute; top:20px; right:20px; text-decoration:none;">✕</a>
+    </div>
+    <img id="uImg" class="avatar" src="https://via.placeholder.com/130">
+    <div class="info">
+        <h2 id="uName">جاري التحميل...</h2>
+        <p style="color:var(--pink); font-weight:700;">عضو في كوزمتك</p>
+    </div>
+    <div id="vNav" class="visitor-nav">
+        <a id="vWa" class="btn-act" style="background:#25d366;">واتساب</a>
+        <a id="vPh" class="btn-act" style="background:#007bff;">اتصال</a>
+        <button onclick="toChat()" class="btn-act" style="background:var(--pink);">مراسلة</button>
+    </div>
+    <script>
+        const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(config);
+        const db = firebase.database();
+        const my = localStorage.getItem('app_user_phone');
+        let tid = new URLSearchParams(window.location.search).get('id') || my;
+        db.ref('users/'+tid).once('value', s => {
+            let d = s.val() || {};
+            document.getElementById('uName').innerText = d.name || "مستخدم";
+            if(d.img) document.getElementById('uImg').src = d.img;
+            if(tid !== my) {
+                document.getElementById('vNav').style.display = 'flex';
+                document.getElementById('vWa').href = "https://wa.me/"+tid;
+                document.getElementById('vPh').href = "tel:"+tid;
+            }
+        });
+        function toChat() {
+            const cid = my < tid ? my+"_"+tid : tid+"_"+my;
+            location.href = `chat.html?chatId=${cid}&receiver=${tid}`;
         }
-    });
-
-    function toChat() {
-        const cid = my < tid ? my+"_"+tid : tid+"_"+my;
-        location.href = `chat.html?chatId=${cid}&receiver=${tid}`;
-    }
-</script>
+    </script>
 </body>
 </html>
