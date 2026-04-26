@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        /* تصميمك الأصلي حرفياً */
+        /* سأبقي هذا الجزء كما هو في ملفك الأصلي تماماً دون أي تغيير */
         :root { --pink: #880e4f; --accent: #ad1457; --gray: #f8f9fa; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; outline: none; }
         body { background: #fff; margin: 0; padding-top: 70px; }
@@ -17,77 +17,56 @@
         .card { background: white; border-radius: 15px; overflow: hidden; border: 1px solid #eee; }
         .card img { width: 100%; height: 160px; object-fit: cover; }
         .card-info { padding: 10px; }
-        
         #detailsScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; overflow-y: auto; }
         .details-header { height: 300px; position: relative; }
         .details-header img { width: 100%; height: 100%; object-fit: cover; }
-        
         .owner-card { display: flex; align-items: center; background: var(--gray); padding: 15px; border-radius: 15px; margin: 15px; cursor: pointer; }
         .owner-img { width: 50px; height: 50px; border-radius: 50%; margin-left: 12px; object-fit: cover; }
-        
         .action-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; display: flex; gap: 8px; border-top: 1px solid #eee; }
         .btn-act { flex: 1; color: white; padding: 15px; border-radius: 12px; font-weight: 700; text-align: center; text-decoration: none; font-size: 13px; border: none; }
     </style>
 </head>
 <body>
-
     <header>
         <div style="font-weight: 800; color: var(--pink); font-size: 20px;">Cosmetic Pro</div>
         <div onclick="location.href='profile.html'" style="cursor:pointer;">👤 حسابي</div>
     </header>
-
     <div class="grid" id="productsGrid"></div>
-
     <div id="detailsScreen">
         <div class="details-header">
             <button onclick="closeDetails()" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:40px; height:40px;">✕</button>
             <img id="detImg" src="">
         </div>
-        
         <div id="ownerBtn" class="owner-card">
             <img id="ownerImg" class="owner-img" src="">
             <div>
-                <div id="ownerName" style="font-weight:700;">اسم الناشر</div>
+                <div id="ownerName" style="font-weight:700;">...</div>
                 <div style="font-size: 11px; color: #888;">عرض الملف الشخصي</div>
             </div>
         </div>
-
         <div style="padding: 0 20px;">
-            <h2 id="detTitle" style="margin-bottom:5px;"></h2>
+            <h2 id="detTitle"></h2>
             <div id="detPrice" style="color:var(--pink); font-weight:800; font-size:20px; margin-bottom:15px;"></div>
-            <p id="detDesc" style="color:#666; line-height:1.6;"></p>
+            <p id="detDesc"></p>
         </div>
-        
         <div class="action-bar">
             <a id="linkPh" href="#" class="btn-act" style="background:#007bff;">اتصال</a>
             <a id="linkWa" href="#" class="btn-act" style="background:#25d366;">واتساب</a>
             <button id="btnChat" class="btn-act" style="background:var(--pink);">مراسلة</button>
         </div>
     </div>
-
     <script>
         const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
         const myPhone = localStorage.getItem('app_user_phone');
-
-        // عرض المنتجات في الواجهة
         db.ref('products').on('value', snap => {
-            const grid = document.getElementById('productsGrid');
-            grid.innerHTML = '';
+            const grid = document.getElementById('productsGrid'); grid.innerHTML = '';
             snap.forEach(child => {
                 const p = child.val();
-                grid.innerHTML += `
-                    <div class="card" onclick="openDetails('${child.key}')">
-                        <img src="${p.image}">
-                        <div class="card-info">
-                            <div style="font-weight:700; font-size:13px;">${p.title}</div>
-                            <div style="color:var(--pink); font-weight:800;">${p.price} IQD</div>
-                        </div>
-                    </div>`;
+                grid.innerHTML += `<div class="card" onclick="openDetails('${child.key}')"><img src="${p.image}"><div class="card-info"><div style="font-weight:700;">${p.title}</div><div style="color:var(--pink); font-weight:800;">${p.price} IQD</div></div></div>`;
             });
         });
-
         function openDetails(id) {
             db.ref('products/' + id).once('value', snap => {
                 const data = snap.val();
@@ -95,35 +74,24 @@
                 document.getElementById('detTitle').innerText = data.title;
                 document.getElementById('detPrice').innerText = data.price + " IQD";
                 document.getElementById('detDesc').innerText = data.description;
-
-                // جلب بيانات صاحب المنتج للربط
                 db.ref('users/' + data.owner).once('value', uSnap => {
                     const uData = uSnap.val() || {};
                     document.getElementById('ownerName').innerText = uData.name || "مستخدم";
                     document.getElementById('ownerImg').src = uData.img || "https://via.placeholder.com/50";
-                    
-                    // زر عرض الملف الشخصي
-                    document.getElementById('ownerBtn').onclick = () => {
-                        location.href = `profile.html?id=${data.owner}`;
-                    };
-
-                    // زر المراسلة - إضافة برمجية فقط
+                    document.getElementById('ownerBtn').onclick = () => { location.href = `profile.html?id=${data.owner}`; };
+                    // الربط البرمجي للمراسلة
                     document.getElementById('btnChat').onclick = () => {
-                        if(myPhone === data.owner) return alert("هذا منتجك!");
+                        if(myPhone === data.owner) return;
                         const chatId = myPhone < data.owner ? myPhone + "_" + data.owner : data.owner + "_" + myPhone;
                         location.href = `chat.html?chatId=${chatId}&receiver=${data.owner}`;
                     };
                 });
-
                 document.getElementById('linkWa').href = "https://wa.me/" + data.owner;
                 document.getElementById('linkPh').href = "tel:" + data.owner;
                 document.getElementById('detailsScreen').style.display = 'block';
             });
         }
-
-        function closeDetails() {
-            document.getElementById('detailsScreen').style.display = 'none';
-        }
+        function closeDetails() { document.getElementById('detailsScreen').style.display = 'none'; }
     </script>
 </body>
 </html>
