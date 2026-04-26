@@ -39,7 +39,7 @@
         </div>
         <div class="profile-details">
             <h2 id="dispName">اسم المستخدم</h2>
-            <span class="store-name" id="dispStore">اسم المتجر</span>
+            <span class="store-name" id="dispStore">الملف الشخصي</span>
         </div>
     </div>
 
@@ -49,46 +49,30 @@
 
     <div id="ownerView" class="owner-settings">
         <div class="input-group"><label>اسم المستخدم</label><input type="text" id="inName"></div>
-        <div class="input-group"><label>اسم المتجر</label><input type="text" id="inStore"></div>
-        <div class="input-group"><label>رقم الواتساب</label><input type="tel" id="inWa"></div>
-        <div class="input-group"><label>رقم الموبايل</label><input type="tel" id="inPhone" readonly style="background:#f0f0f0;"></div>
-        <div class="input-group"><label>رابط تليجرام/إنستا</label><input type="url" id="inSocial"></div>
+        <div class="input-group"><label>رقم الموبايل (لا يمكن تغييره)</label><input type="tel" id="inPhone" readonly style="background:#f0f0f0;"></div>
+        <div class="input-group"><label>رقم الواتساب للتواصل</label><input type="tel" id="inWa"></div>
         <button class="save-btn" id="saveBtn" onclick="saveProfile()">حفظ التعديلات</button>
     </div>
 
     <div class="mode-switcher" onclick="toggleViewMode()">تبديل العرض</div>
 
     <script>
+        const userPhone = localStorage.getItem('app_user_phone');
+        if (!userPhone) location.href = 'login.html';
+
         const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
 
-        // تحقق من تسجيل الدخول
-        const userPhone = localStorage.getItem('app_user_phone');
-        if (!userPhone) {
-            location.href = 'login.html';
-        }
-
         window.onload = function() {
-            // جلب بيانات المستخدم المحددة عبر رقم الموبايل
+            // جلب بياناتي الشخصية فقط بناءً على رقم موبايلي
             db.ref('users/' + userPhone).once('value', snap => {
-                const saved = snap.val() || {};
-                
-                // تحديث الواجهة
-                document.getElementById('dispName').innerText = saved.name || "اسم المستخدم";
-                document.getElementById('inName').value = saved.name || "";
-                
-                // جلب اسم المتجر وبقية الإعدادات من قسم settings العام
-                db.ref('settings').once('value', sSnap => {
-                    const settings = sSnap.val() || {};
-                    document.getElementById('dispStore').innerText = settings.store || "اسم المتجر";
-                    document.getElementById('inStore').value = settings.store || "";
-                    document.getElementById('inWa').value = settings.wa || "";
-                    document.getElementById('inSocial').value = settings.social || "";
-                });
-
-                if(saved.img) document.getElementById('userAvatar').src = saved.img;
+                const data = snap.val() || {};
+                document.getElementById('dispName').innerText = data.name || "مستخدم جديد";
+                document.getElementById('inName').value = data.name || "";
                 document.getElementById('inPhone').value = userPhone;
+                document.getElementById('inWa').value = data.wa || userPhone;
+                if(data.img) document.getElementById('userAvatar').src = data.img;
             });
         };
 
@@ -103,33 +87,19 @@
         async function saveProfile() {
             const btn = document.getElementById('saveBtn');
             btn.innerText = "جاري الحفظ...";
+            const data = {
+                name: document.getElementById('inName').value,
+                wa: document.getElementById('inWa').value,
+                img: document.getElementById('userAvatar').src,
+                phone: userPhone
+            };
             
-            const name = document.getElementById('inName').value;
-            const store = document.getElementById('inStore').value;
-            const wa = document.getElementById('inWa').value;
-            const social = document.getElementById('inSocial').value;
-            const img = document.getElementById('userAvatar').src;
-
-            const userData = { name, img, phone: userPhone };
-            const storeSettings = { store, wa, social, img };
-
-            try {
-                // حفظ بيانات المستخدم الخاصة
-                await db.ref('users/' + userPhone).update(userData);
-                // حفظ إعدادات المتجر العامة
-                await db.ref('settings').update(storeSettings);
-                
-                // تحديث التخزين المحلي
-                localStorage.setItem('alfaham_profile', JSON.stringify({...userData, ...storeSettings}));
-
-                document.getElementById('dispName').innerText = name;
-                document.getElementById('dispStore').innerText = store;
+            // الحفظ في المسار الخاص بالمستخدم فقط
+            db.ref('users/' + userPhone).update(data).then(() => {
+                document.getElementById('dispName').innerText = data.name;
                 btn.innerText = "حفظ التعديلات";
-                alert("تم تحديث الملف الشخصي بنجاح!");
-            } catch (error) {
-                alert("حدث خطأ أثناء الحفظ");
-                btn.innerText = "حفظ التعديلات";
-            }
+                alert("تم تحديث ملفك الشخصي!");
+            });
         }
 
         let isOwner = true;
