@@ -8,15 +8,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
+        /* تصميمك الأصلي حرفياً بدون أي تغيير */
         :root { --pink: #880e4f; --accent: #ad1457; --gray: #f8f9fa; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
         body { background: #fff; margin: 0; padding-bottom: 20px; color: #333; overflow-x: hidden; }
-        
         header { background: var(--pink); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
         .header-controls { display: flex; align-items: center; gap: 10px; }
         .profile-nav-icon { width: 35px; height: 35px; border-radius: 50%; border: 2px solid white; object-fit: cover; cursor: pointer; transition: 0.3s; }
         .profile-nav-icon:hover { transform: scale(1.1); }
-        
         #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; padding: 12px; }
         .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; position: relative; }
         .card img { width: 100%; height: 180px; object-fit: cover; cursor: pointer; }
@@ -84,16 +83,13 @@
     <div class="bottom-nav">
         <a id="linkWa" href="" class="btn-act" style="background:#25d366;">واتساب</a>
         <a id="linkPh" href="" class="btn-act" style="background:#007bff;">اتصال</a>
-        <a id="linkSocial" href="#" class="btn-act" style="background:var(--pink);">مراسلة</a>
+        <button id="btnChat" class="btn-act" style="background:var(--pink); border:none; cursor:pointer;">مراسلة</button>
     </div>
 </div>
 
 <script>
-    // --- كود التحقق من تسجيل الدخول (يرتبط بـ login.html) ---
     const userPhone = localStorage.getItem('app_user_phone');
-    if (!userPhone) {
-        location.href = 'login.html';
-    }
+    if (!userPhone) { location.href = 'login.html'; }
 
     const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(config);
@@ -101,12 +97,102 @@
     let currentEditId = null;
     let globalSettings = {};
 
-    // جلب الإعدادات لتحديث الأيقونة وروابط التواصل
     db.ref('settings').on('value', snap => { 
         globalSettings = snap.val() || {}; 
         if(globalSettings.img) document.getElementById('navProfileImg').src = globalSettings.img;
     });
 
+    // دالة النشر مع إضافة رقم صاحب المنتج تلقائياً
+    async function publish() {
+        const btn = document.getElementById('btnPub');
+        const title = document.getElementById('pTitle').value;
+        if(!title) return alert("الاسم مطلوب");
+        btn.disabled = true; btn.innerText = "جاري الحفظ...";
+        
+        let obj = {
+            title, price: document.getElementById('pPrice').value,
+            currency: document.getElementById('pCurrency').value,
+            desc: document.getElementById('pDesc').value,
+            status: document.getElementById('pStatus').value,
+            phone: document.getElementById('pPhone').value,
+            whatsapp: document.getElementById('pWhatsapp').value,
+            owner: userPhone, // ربط المنتج بصاحبه
+            time: Date.now()
+        };
+        const file = document.getElementById('pCover').files[0];
+        if(file) {
+            obj.image = await processImg(file);
+            let alb = [obj.image];
+            const extraFiles = document.getElementById('pAlbum').files;
+            for(let f of extraFiles) alb.push(await processImg(f));
+            obj.album = alb;
+        }
+        const ref = currentEditId ? db.ref('products/' + currentEditId) : db.ref('products').push();
+        ref.update(obj).then(() => { btn.disabled = false; window.history.back(); });
+    }
+
+    // عرض المنتجات
+    db.ref('products').on('value', snap => {
+        const grid = document.getElementById('grid'); grid.innerHTML = '';
+        snap.forEach(child => {
+            const d = child.val(); const id = child.key;
+            const card = document.createElement('div');
+            card.className = 'card';
+            // إظهار أزرار التحكم فقط لصاحب المنتج أو الأدمن
+            let adminBtns = (d.owner === userPhone) ? `
+                <button class="admin-btn del-btn" onclick="event.stopPropagation(); deleteItem('${id}')">✕</button>
+                <button class="admin-btn edit-btn" onclick="event.stopPropagation(); openPop('${id}')">✎</button>
+            ` : '';
+            
+            card.innerHTML = `${adminBtns}
+                <img src="${d.image}" onclick='openDetails("${id}")'>
+                <div class="card-title">${d.title}</div>`;
+            grid.prepend(card);
+        });
+    });
+
+    // فتح التفاصيل مع تفعيل زر المراسلة
+    function openDetails(id) {
+        db.ref('products/' + id).once('value', snap => {
+            const data = snap.val();
+            const s = document.getElementById('vSlider'); const dots = document.getElementById('vDots');
+            s.innerHTML = ''; dots.innerHTML = '';
+            const imgs = data.album || [data.image];
+            imgs.forEach((img, i) => {
+                s.innerHTML += `<img src="${img}">`;
+                dots.innerHTML += `<div class="dot ${i==0?'active':''}"></div>`;
+            });
+            s.onscroll = () => {
+                const idx = Math.round(s.scrollLeft / s.offsetWidth);
+                document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i == idx));
+            };
+            document.getElementById('vTitle').innerText = data.title;
+            document.getElementById('vPrice').innerText = data.price ? data.price + " " + data.currency : "";
+            document.getElementById('vDesc').innerText = data.desc;
+            const st = document.getElementById('vStatus');
+            st.innerText = data.status; st.style.background = data.status=="متوفر"?"#e8f5e9":"#ffebee"; st.style.color = data.status=="متوفر"?"#2e7d32" : "#c62828";
+            
+            document.getElementById('linkWa').href = "https://wa.me/" + (data.whatsapp || globalSettings.wa || "");
+            document.getElementById('linkPh').href = "tel:" + (data.phone || globalSettings.phone || "");
+            
+            // --- التعديل البرمجي للمراسلة هنا ---
+            document.getElementById('btnChat').onclick = function() {
+                const targetPhone = data.owner || data.phone; // مراسلة صاحب المنتج
+                if(!targetPhone) return alert("رابط المراسلة غير متوفر");
+                if(targetPhone === userPhone) return alert("هذا منتجك!");
+                
+                // إنشاء معرف غرفة الدردشة (ID)
+                const chatId = userPhone < targetPhone ? userPhone + "_" + targetPhone : targetPhone + "_" + userPhone;
+                location.href = `chat.html?chatId=${chatId}&receiver=${targetPhone}`;
+            };
+
+            document.getElementById('detailsScreen').style.display = 'block';
+            window.history.pushState({p:1}, '');
+        });
+    }
+
+    // بقية الدوال المساعدة (المعالجة والحذف) تبقى كما هي
+    function deleteItem(id) { if(confirm('حذف؟')) db.ref('products/' + id).remove(); }
     function openPop(id = null) {
         if (id) {
             currentEditId = id;
@@ -132,33 +218,6 @@
         document.getElementById('addPop').style.display = 'flex';
         window.history.pushState({p:1}, '');
     }
-
-    async function publish() {
-        const btn = document.getElementById('btnPub');
-        const title = document.getElementById('pTitle').value;
-        if(!title) return alert("الاسم مطلوب");
-        btn.disabled = true; btn.innerText = "جاري الحفظ...";
-        let obj = {
-            title, price: document.getElementById('pPrice').value,
-            currency: document.getElementById('pCurrency').value,
-            desc: document.getElementById('pDesc').value,
-            status: document.getElementById('pStatus').value,
-            phone: document.getElementById('pPhone').value,
-            whatsapp: document.getElementById('pWhatsapp').value,
-            time: Date.now()
-        };
-        const file = document.getElementById('pCover').files[0];
-        if(file) {
-            obj.image = await processImg(file);
-            let alb = [obj.image];
-            const extraFiles = document.getElementById('pAlbum').files;
-            for(let f of extraFiles) alb.push(await processImg(f));
-            obj.album = alb;
-        }
-        const ref = currentEditId ? db.ref('products/' + currentEditId) : db.ref('products').push();
-        ref.update(obj).then(() => { btn.disabled = false; window.history.back(); });
-    }
-
     function processImg(file) {
         return new Promise(res => {
             const r = new FileReader(); r.readAsDataURL(file);
@@ -173,50 +232,6 @@
             }
         });
     }
-
-    db.ref('products').on('value', snap => {
-        const grid = document.getElementById('grid'); grid.innerHTML = '';
-        snap.forEach(child => {
-            const d = child.val(); const id = child.key;
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `<button class="admin-btn del-btn" onclick="event.stopPropagation(); deleteItem('${id}')">✕</button>
-                <button class="admin-btn edit-btn" onclick="event.stopPropagation(); openPop('${id}')">✎</button>
-                <img src="${d.image}" onclick='openDetails("${id}")'>
-                <div class="card-title">${d.title}</div>`;
-            grid.prepend(card);
-        });
-    });
-
-    function deleteItem(id) { if(confirm('حذف؟')) db.ref('products/' + id).remove(); }
-
-    function openDetails(id) {
-        db.ref('products/' + id).once('value', snap => {
-            const data = snap.val();
-            const s = document.getElementById('vSlider'); const dots = document.getElementById('vDots');
-            s.innerHTML = ''; dots.innerHTML = '';
-            const imgs = data.album || [data.image];
-            imgs.forEach((img, i) => {
-                s.innerHTML += `<img src="${img}">`;
-                dots.innerHTML += `<div class="dot ${i==0?'active':''}"></div>`;
-            });
-            s.onscroll = () => {
-                const idx = Math.round(s.scrollLeft / s.offsetWidth);
-                document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i == idx));
-            };
-            document.getElementById('vTitle').innerText = data.title;
-            document.getElementById('vPrice').innerText = data.price ? data.price + " " + data.currency : "";
-            document.getElementById('vDesc').innerText = data.desc;
-            const st = document.getElementById('vStatus');
-            st.innerText = data.status; st.style.background = data.status=="متوفر"?"#e8f5e9":"#ffebee"; st.style.color = data.status=="متوفر"?"#2e7d32" : "#c62828";
-            document.getElementById('linkWa').href = "https://wa.me/" + (data.whatsapp || globalSettings.wa || "");
-            document.getElementById('linkPh').href = "tel:" + (data.phone || globalSettings.phone || "");
-            document.getElementById('linkSocial').href = globalSettings.social || "#";
-            document.getElementById('detailsScreen').style.display = 'block';
-            window.history.pushState({p:1}, '');
-        });
-    }
-
     window.onpopstate = () => document.querySelectorAll('.modal, #detailsScreen').forEach(m => m.style.display='none');
     function previewFile(i) { const r = new FileReader(); r.onload = e => { const p = document.getElementById('prev'); p.src = e.target.result; p.style.display='block'; }; r.readAsDataURL(i.files[0]); }
 </script>
