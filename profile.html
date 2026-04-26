@@ -10,28 +10,38 @@
     <style>
         :root { --pink: #880e4f; --accent: #ad1457; --gray: #f8f9fa; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; outline: none; }
-        body { background: #fff; margin: 0; color: #333; padding-bottom: 80px; }
+        body { background: #fff; margin: 0; color: #333; padding-bottom: 100px; }
+        
+        /* الهيدر الأصلي */
         .profile-header { height: 180px; background: linear-gradient(45deg, var(--pink), var(--accent)); border-radius: 0 0 30px 30px; position: relative; }
+        .back-btn { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.3); color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-size: 12px; font-weight: 700; backdrop-filter: blur(5px); }
+
         .avatar-container { position: relative; width: 130px; height: 130px; margin: -65px auto 0; }
         #userAvatar { width: 130px; height: 130px; border-radius: 50%; border: 5px solid white; object-fit: cover; background: #eee; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .edit-avatar-btn { position: absolute; bottom: 5px; right: 5px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; border: none; font-size: 18px; display: none; }
+        
         .profile-details { text-align: center; padding: 15px 20px; }
         h2 { margin: 10px 0 5px; font-weight: 800; font-size: 22px; }
         .store-name { color: var(--pink); font-weight: 700; font-size: 15px; display: block; margin-bottom: 15px; }
+        
+        /* قسم المنتجات */
         .products-section { padding: 15px; }
         .section-title { font-weight: 800; font-size: 18px; margin-bottom: 15px; border-right: 4px solid var(--pink); padding-right: 10px; }
         #ownerGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
         .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .card img { width: 100%; height: 150px; object-fit: cover; }
         .card-title { padding: 8px; font-weight: 700; font-size: 12px; text-align: center; }
-        .visitor-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 12px; gap: 8px; box-shadow: 0 -5px 20px rgba(0,0,0,0.08); z-index: 100; flex-wrap: wrap; }
-        .btn-act { flex: 1; color: white; padding: 14px; border-radius: 12px; font-weight: 700; text-align: center; text-decoration: none; font-size: 13px; min-width: 100px; }
-        .owner-edit-box { display: none; padding: 20px; background: #f9f9f9; margin: 15px; border-radius: 20px; }
+
+        /* شريط الأزرار الثلاثة للزوار */
+        .visitor-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; gap: 8px; box-shadow: 0 -5px 20px rgba(0,0,0,0.08); z-index: 100; }
+        .btn-act { flex: 1; color: white; padding: 12px; border-radius: 12px; font-weight: 700; text-align: center; text-decoration: none; font-size: 12px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
+
+        /* صندوق التعديل */
+        .owner-edit-box { display: none; padding: 20px; background: #f9f9f9; margin: 15px; border-radius: 20px; border: 1px solid #eee; }
         .input-group { margin-bottom: 12px; }
         .input-group label { display: block; font-size: 12px; color: #777; margin-bottom: 5px; }
         .input-group input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; }
         .save-btn { background: #2e7d32; color: white; border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; }
-        .back-btn { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.3); color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-size: 12px; font-weight: 700; backdrop-filter: blur(5px); }
     </style>
 </head>
 <body>
@@ -45,16 +55,15 @@
             <button class="edit-avatar-btn" id="editAvatarBtn" onclick="document.getElementById('avatarInput').click()">✎</button>
         </div>
         <div class="profile-details">
-            <h2 id="dispName">...</h2>
+            <h2 id="dispName">جاري التحميل...</h2>
             <span class="store-name">عضو في كوزمتك برو</span>
         </div>
     </div>
 
     <div id="ownerEditBox" class="owner-edit-box">
-        <div class="section-title">إعدادات الحساب</div>
-        <div class="input-group"><label>الاسم الشخصي</label><input type="text" id="inName"></div>
-        <div class="input-group"><label>رقم الواتساب</label><input type="tel" id="inWa"></div>
-        <div class="input-group"><label>رابط تواصل إضافي (فيسبوك/إنستا)</label><input type="url" id="inSocial" placeholder="https://..."></div>
+        <div class="section-title">إعدادات حسابي</div>
+        <div class="input-group"><label>الاسم</label><input type="text" id="inName"></div>
+        <div class="input-group"><label>واتساب</label><input type="tel" id="inWa"></div>
         <button class="save-btn" onclick="saveProfile()">حفظ البيانات</button>
     </div>
 
@@ -64,9 +73,9 @@
     </div>
 
     <div id="visitorNav" class="visitor-nav">
-        <a id="callLink" href="#" class="btn-act" style="background:var(--pink);">اتصال</a>
         <a id="waLink" href="#" class="btn-act" style="background:#25d366;">واتساب</a>
-        <a id="socialLink" href="#" class="btn-act" style="background:#007bff; display:none;">الرابط الإضافي</a>
+        <a id="callLink" href="#" class="btn-act" style="background:#007bff;">اتصال</a>
+        <button onclick="goToChat()" class="btn-act" style="background:var(--pink);">مراسلة</button>
     </div>
 
     <script>
@@ -74,37 +83,33 @@
         const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
+        let targetUserPhone = "";
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
-            const targetPhone = urlParams.get('id') || myPhone;
-            if (!targetPhone) { location.href = 'login.html'; return; }
+            targetUserPhone = urlParams.get('id') || myPhone;
+            if (!targetUserPhone) { location.href = 'login.html'; return; }
 
-            db.ref('users/' + targetPhone).once('value', snap => {
+            // جلب بيانات المستخدم
+            db.ref('users/' + targetUserPhone).once('value', snap => {
                 const data = snap.val() || {};
                 document.getElementById('dispName').innerText = data.name || "مستخدم";
                 if(data.img) document.getElementById('userAvatar').src = data.img;
                 
-                if (targetPhone === myPhone) {
+                if (targetUserPhone === myPhone) {
                     document.getElementById('ownerEditBox').style.display = 'block';
                     document.getElementById('editAvatarBtn').style.display = 'flex';
                     document.getElementById('inName').value = data.name || "";
                     document.getElementById('inWa').value = data.wa || myPhone;
-                    document.getElementById('inSocial').value = data.social || "";
                 } else {
                     document.getElementById('visitorNav').style.display = 'flex';
-                    document.getElementById('waLink').href = "https://wa.me/" + (data.wa || targetPhone);
+                    document.getElementById('waLink').href = "https://wa.me/" + (data.wa || targetUserPhone);
                     document.getElementById('callLink').href = "tel:" + targetPhone;
-                    if(data.social) {
-                        const sLink = document.getElementById('socialLink');
-                        sLink.href = data.social;
-                        sLink.style.display = 'block';
-                        sLink.innerText = "رابط التواصل";
-                    }
                 }
             });
 
-            db.ref('products').orderByChild('owner').equalTo(targetPhone).on('value', snap => {
+            // جلب المنتجات
+            db.ref('products').orderByChild('owner').equalTo(targetUserPhone).on('value', snap => {
                 const grid = document.getElementById('ownerGrid');
                 grid.innerHTML = '';
                 if(!snap.exists()) { grid.innerHTML = '<p style="text-align:center; font-size:12px; color:#999;">لا توجد منتجات</p>'; return; }
@@ -114,6 +119,15 @@
                 });
             });
         };
+
+        // دالة المراسلة الحقيقية
+        function goToChat() {
+            if (!targetUserPhone || targetUserPhone === myPhone) return;
+            // إنشاء معرف غرفة فريد بين الطرفين
+            const chatId = myPhone < targetUserPhone ? myPhone + "_" + targetUserPhone : targetUserPhone + "_" + myPhone;
+            // التوجه لصفحة الدردشة (تأكد من وجود ملف chat.html)
+            location.href = `chat.html?chatId=${chatId}&receiver=${targetUserPhone}`;
+        }
 
         function updateAvatar(input) {
             if (input.files && input.files[0]) {
@@ -127,9 +141,8 @@
             db.ref('users/' + myPhone).update({
                 name: document.getElementById('inName').value,
                 wa: document.getElementById('inWa').value,
-                social: document.getElementById('inSocial').value,
                 img: document.getElementById('userAvatar').src
-            }).then(() => { alert("تم الحفظ"); location.reload(); });
+            }).then(() => { alert("تم الحفظ بنجاح"); location.reload(); });
         }
     </script>
 </body>
