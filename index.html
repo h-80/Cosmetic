@@ -11,17 +11,15 @@
         :root { --pink: #880e4f; --accent: #ad1457; --gray: #f8f9fa; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
         body { background: #fff; margin: 0; padding-bottom: 20px; color: #333; overflow-x: hidden; }
-        
         header { background: var(--pink); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
         .header-controls { display: flex; align-items: center; gap: 10px; }
         .profile-nav-icon { width: 35px; height: 35px; border-radius: 50%; border: 2px solid white; object-fit: cover; cursor: pointer; transition: 0.3s; }
         .profile-nav-icon:hover { transform: scale(1.1); }
-        
         #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; padding: 12px; }
         .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; position: relative; }
         .card img { width: 100%; height: 180px; object-fit: cover; cursor: pointer; }
         .card-title { padding: 10px; font-weight: 700; font-size: 13px; text-align: center; }
-        .admin-btn { position: absolute; top: 8px; background: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 10; }
+        .admin-btn { position: absolute; top: 8px; background: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 10; display: none; } /* مخفية افتراضياً */
         .del-btn { left: 8px; color: #d32f2f; }
         .edit-btn { left: 45px; color: #1976d2; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
@@ -45,7 +43,7 @@
     <strong>كوزمتك - Cosmetic</strong>
     <div class="header-controls">
         <button onclick="openPop()" style="background:white; color:var(--pink); border:none; padding:8px 20px; border-radius:20px; font-weight:700;">+ إضافة</button>
-        <img id="navProfileImg" src="https://via.placeholder.com/35" class="profile-nav-icon" onclick="location.href='profile.html'" title="الملف الشخصي">
+        <img id="navProfileImg" src="https://via.placeholder.com/35" class="profile-nav-icon" onclick="location.href='profile.html'">
     </div>
 </header>
 
@@ -89,22 +87,18 @@
 </div>
 
 <script>
-    // --- كود التحقق من تسجيل الدخول (يرتبط بـ login.html) ---
     const userPhone = localStorage.getItem('app_user_phone');
-    if (!userPhone) {
-        location.href = 'login.html';
-    }
+    if (!userPhone) location.href = 'login.html';
 
     const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(config);
     const db = firebase.database();
     let currentEditId = null;
-    let globalSettings = {};
 
-    // جلب الإعدادات لتحديث الأيقونة وروابط التواصل
-    db.ref('settings').on('value', snap => { 
-        globalSettings = snap.val() || {}; 
-        if(globalSettings.img) document.getElementById('navProfileImg').src = globalSettings.img;
+    // تحديث صورة الهيدر من بيانات المستخدم الحالي فقط
+    db.ref('users/' + userPhone).on('value', snap => {
+        const u = snap.val();
+        if(u && u.img) document.getElementById('navProfileImg').src = u.img;
     });
 
     function openPop(id = null) {
@@ -145,6 +139,7 @@
             status: document.getElementById('pStatus').value,
             phone: document.getElementById('pPhone').value,
             whatsapp: document.getElementById('pWhatsapp').value,
+            owner: userPhone, // ربط المنتج برقم هاتفك
             time: Date.now()
         };
         const file = document.getElementById('pCover').files[0];
@@ -180,8 +175,11 @@
             const d = child.val(); const id = child.key;
             const card = document.createElement('div');
             card.className = 'card';
-            card.innerHTML = `<button class="admin-btn del-btn" onclick="event.stopPropagation(); deleteItem('${id}')">✕</button>
-                <button class="admin-btn edit-btn" onclick="event.stopPropagation(); openPop('${id}')">✎</button>
+            // التحكم في ظهور أزرار الإدارة
+            const isAdmin = (d.owner === userPhone);
+            card.innerHTML = `
+                <button class="admin-btn del-btn" style="display:${isAdmin?'flex':'none'}" onclick="event.stopPropagation(); deleteItem('${id}')">✕</button>
+                <button class="admin-btn edit-btn" style="display:${isAdmin?'flex':'none'}" onclick="event.stopPropagation(); openPop('${id}')">✎</button>
                 <img src="${d.image}" onclick='openDetails("${id}")'>
                 <div class="card-title">${d.title}</div>`;
             grid.prepend(card);
@@ -209,9 +207,8 @@
             document.getElementById('vDesc').innerText = data.desc;
             const st = document.getElementById('vStatus');
             st.innerText = data.status; st.style.background = data.status=="متوفر"?"#e8f5e9":"#ffebee"; st.style.color = data.status=="متوفر"?"#2e7d32" : "#c62828";
-            document.getElementById('linkWa').href = "https://wa.me/" + (data.whatsapp || globalSettings.wa || "");
-            document.getElementById('linkPh').href = "tel:" + (data.phone || globalSettings.phone || "");
-            document.getElementById('linkSocial').href = globalSettings.social || "#";
+            document.getElementById('linkWa').href = "https://wa.me/" + (data.whatsapp || "");
+            document.getElementById('linkPh').href = "tel:" + (data.phone || "");
             document.getElementById('detailsScreen').style.display = 'block';
             window.history.pushState({p:1}, '');
         });
