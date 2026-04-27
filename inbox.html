@@ -16,7 +16,7 @@
             background: var(--pink); color: white; padding: 10px 15px; 
             display: flex; align-items: center; gap: 10px;
             font-weight: bold; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            min-height: 60px;
+            min-height: 60px; flex-shrink: 0; /* منع الهيدر من الانضغاط */
         }
         .back-btn { cursor: pointer; font-size: 20px; padding-left: 10px; }
         
@@ -34,15 +34,16 @@
         .last-msg { font-size: 12px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-dot { width: 10px; height: 10px; background: #ff1744; border-radius: 50%; margin-right: 10px; }
 
-        #chatView { flex: 1; display: none; flex-direction: column; background: #e5ddd5; }
+        #chatView { flex: 1; display: none; flex-direction: column; background: #e5ddd5; overflow: hidden; }
         #msgBox { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
         .msg { max-width: 80%; padding: 8px 12px; border-radius: 15px; font-size: 14px; line-height: 1.5; }
         .sent { align-self: flex-start; background: #880e4f; color: white; border-bottom-right-radius: 2px; }
         .received { align-self: flex-end; background: white; color: #333; border-bottom-left-radius: 2px; }
         
-        .input-area { background: white; padding: 10px; display: flex; gap: 8px; align-items: center; }
+        /* الإصلاح هنا: إضافة flex-shrink لمنع اختفاء الحقل */
+        .input-area { background: white; padding: 10px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
         #mInput { flex: 1; border: 1px solid #ddd; padding: 10px 15px; border-radius: 20px; outline: none; }
-        #sendBtn { background: var(--pink); color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; }
+        #sendBtn { background: var(--pink); color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -68,13 +69,13 @@
 <script>
     const userPhone = localStorage.getItem('app_user_phone');
     const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
-    firebase.initializeApp(config);
+    if (!firebase.apps.length) { firebase.initializeApp(config); }
     const db = firebase.database();
 
     let activeChatId = null;
     let activeReceiver = null;
 
-    if (!userPhone) location.href = 'login.html';
+    if (!userPhone) { console.log("رقم الهاتف مفقود"); }
 
     async function getUserData(phone) {
         const snap = await db.ref('users/' + phone).once('value');
@@ -87,6 +88,7 @@
 
     db.ref('chats').on('value', async snap => {
         const list = document.getElementById('listContent');
+        if(!list) return;
         list.innerHTML = '';
         const promises = [];
 
@@ -137,7 +139,7 @@
             const box = document.getElementById('msgBox');
             box.innerHTML = '';
             
-            // نظام الاقتصاص (الاحتفاظ بآخر 50 رسالة فقط)
+            // نظام الاقتصاص لآخر 50 رسالة
             if (snap.numChildren() > 50) {
                 let count = 0;
                 const total = snap.numChildren();
@@ -176,7 +178,8 @@
             document.getElementById('headerImg').style.display = 'none';
             document.getElementById('headerTitle').innerText = 'رسائلي';
         } else {
-            location.href = 'index.html';
+            // الرجوع للصفحة السابقة في التطبيق
+            window.history.back();
         }
     }
 </script>
