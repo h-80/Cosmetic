@@ -16,14 +16,12 @@
             background: var(--pink); color: white; padding: 10px 15px; 
             display: flex; align-items: center; gap: 10px;
             font-weight: bold; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            min-height: 60px;
+            min-height: 60px; flex-shrink: 0; z-index: 10;
         }
         .back-btn { cursor: pointer; font-size: 20px; padding-left: 10px; }
-        
-        /* صورة الشخص في الهيدر */
-        #headerImg { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid white; display: none; }
+        #headerImg { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid white; display: none; }
 
-        #inboxView { flex: 1; overflow-y: auto; }
+        #inboxView { flex: 1; overflow-y: auto; padding-bottom: 20px; }
         .chat-item { 
             background: white; margin: 8px 12px; padding: 12px; border-radius: 15px;
             display: flex; align-items: center; gap: 12px;
@@ -35,15 +33,21 @@
         .last-msg { font-size: 12px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-dot { width: 10px; height: 10px; background: #ff1744; border-radius: 50%; margin-right: 10px; }
 
-        #chatView { flex: 1; display: none; flex-direction: column; background: #e5ddd5; }
+        /* تعديلات نافذة الدردشة */
+        #chatView { flex: 1; display: none; flex-direction: column; background: #e5ddd5; position: relative; overflow: hidden; }
         #msgBox { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 80%; padding: 8px 12px; border-radius: 15px; font-size: 14px; line-height: 1.5; }
-        .sent { align-self: flex-start; background: #880e4f; color: white; border-bottom-right-radius: 2px; }
-        .received { align-self: flex-end; background: white; color: #333; border-bottom-left-radius: 2px; }
         
-        .input-area { background: white; padding: 10px; display: flex; gap: 8px; align-items: center; }
-        #mInput { flex: 1; border: 1px solid #ddd; padding: 10px 15px; border-radius: 20px; outline: none; }
-        #sendBtn { background: var(--pink); color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; }
+        .msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        
+        /* الرسالة المرسلة (أنا) - جهة اليمين */
+        .sent { align-self: flex-start; background: var(--pink); color: white; border-bottom-right-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        /* الرسالة المستقبلة (الطرف الآخر) - جهة اليسار */
+        .received { align-self: flex-end; background: white; color: #333; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        .input-area { background: #f0f0f0; padding: 10px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; border-top: 1px solid #ddd; }
+        #mInput { flex: 1; border: 1px solid #ddd; padding: 12px 15px; border-radius: 25px; outline: none; font-size: 14px; }
+        #sendBtn { background: var(--pink); color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -61,7 +65,7 @@
 <div id="chatView">
     <div id="msgBox"></div>
     <div class="input-area">
-        <input type="text" id="mInput" placeholder="اكتب رسالة...">
+        <input type="text" id="mInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()">
         <button id="sendBtn" onclick="sendMsg()">إرسال</button>
     </div>
 </div>
@@ -77,7 +81,6 @@
 
     if (!userPhone) location.href = 'login.html';
 
-    // دالة لجلب بيانات المستخدم (الاسم والصورة)
     async function getUserData(phone) {
         const snap = await db.ref('users/' + phone).once('value');
         const data = snap.val() || {};
@@ -87,7 +90,6 @@
         };
     }
 
-    // جلب قائمة المحادثات
     db.ref('chats').on('value', async snap => {
         const list = document.getElementById('listContent');
         list.innerHTML = '';
@@ -126,12 +128,12 @@
         document.getElementById('inboxView').style.display = 'none';
         document.getElementById('chatView').style.display = 'flex';
         
-        // تحديث الهيدر بالصورة والاسم
         document.getElementById('headerTitle').innerText = name;
         const hImg = document.getElementById('headerImg');
         hImg.src = img;
         hImg.style.display = 'block';
 
+        // تصفير الإشعارات عند الفتح
         db.ref('chats/' + cid).once('value', s => {
             if(s.val() && s.val().receiver === userPhone) db.ref('chats/' + cid).update({ unread: false });
         });
@@ -143,6 +145,7 @@
             snap.forEach(m => {
                 const data = m.val();
                 const div = document.createElement('div');
+                // sent: للمرسل الحالي | received: للطرف الآخر
                 div.className = `msg ${data.sender === userPhone ? 'sent' : 'received'}`;
                 div.innerText = data.text;
                 box.appendChild(div);
@@ -155,8 +158,20 @@
         const input = document.getElementById('mInput');
         const text = input.value.trim();
         if (!text || !activeChatId) return;
-        db.ref('messages/' + activeChatId).push({ sender: userPhone, text: text, time: Date.now() });
-        db.ref('chats/' + activeChatId).update({ lastMsg: text, receiver: activeReceiver, unread: true, lastTime: Date.now() });
+        
+        db.ref('messages/' + activeChatId).push({ 
+            sender: userPhone, 
+            text: text, 
+            time: Date.now() 
+        });
+        
+        db.ref('chats/' + activeChatId).update({ 
+            lastMsg: text, 
+            receiver: activeReceiver, 
+            unread: true, 
+            lastTime: Date.now() 
+        });
+        
         input.value = '';
     }
 
@@ -166,6 +181,7 @@
             document.getElementById('inboxView').style.display = 'block';
             document.getElementById('headerImg').style.display = 'none';
             document.getElementById('headerTitle').innerText = 'رسائلي';
+            db.ref('messages/' + activeChatId).off();
         } else {
             location.href = 'index.html';
         }
