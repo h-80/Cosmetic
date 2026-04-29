@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmetic Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root {
+            --pink: #880e4f;
+            --accent: #ad1457;
+            --bg: #eef1f6;
+            --card: #ffffff;
+            --text: #222;
+            --muted: #777;
+        }
+        * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            margin: 0;
+            padding-bottom: 24px;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+        header {
+            background: var(--pink);
+            color: white;
+            padding: 8px 14px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 8px 30px rgba(136, 14, 79, 0.15);
+        }
+        .header-inner {
+            display: flex;
+            flex-flow: row nowrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            min-height: 66px;
+        }
+        .header-actions { order: 2; }
+        .brand { order: 1; }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.24);
+            padding: 0;
+            display: block;
+        }
+        .brand-text strong {
+            display: block;
+            font-size: 22px;
+            letter-spacing: 0.3px;
+            color: white;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            direction: ltr;
+        }
+        .icon-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.28);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.14);
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+        }
+        .add-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.28);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.18);
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            padding: 0;
+        }
+        .icon-btn:hover,
+        .add-btn:hover {
+            background: rgba(255,255,255,0.28);
+            transform: translateY(-1px);
+            border-color: rgba(255,255,255,0.45);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.95);
+            color: var(--pink);
+            font-size: 22px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        .modal-close:hover {
+            background: white;
+        }
+        .message-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            filter: invert(1) brightness(1.3) contrast(1);
+        }
+        .profile-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: white;
+        }
+        .header-actions .icon-label {
+            display: none;
+        }
+        .hero {
+            padding: 0;
+        }
+        .hero-card {
+            background: linear-gradient(135deg, rgba(136,14,79,.95), rgba(173,20,87,.95));
+            border-radius: 28px;
+            padding: 22px 20px;
+            color: white;
+            box-shadow: 0 20px 50px rgba(136, 14, 79, 0.16);
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        .hero-card h1 {
+            margin: 0 0 10px;
+            font-size: 26px;
+            line-height: 1.2;
+        }
+        .hero-card p {
+            margin: 0;
+            color: rgba(255,255,255,0.85);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .categories {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px 14px 14px;
+            margin-bottom: 4px;
+        }
+        .cat-btn {
+            border: none;
+            background: white;
+            color: var(--muted);
+            padding: 10px 14px;
+            border-radius: 14px;
+            box-shadow: 0 12px 24px rgba(136, 14, 79, 0.06);
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .cat-btn.active {
+            background: var(--pink);
+            color: white;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            justify-content: center;
+            gap: 14px;
+            padding: 0 12px 90px;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(82, 63, 105, 0.08);
+            transition: transform .3s ease, box-shadow .3s ease;
+            border: 1px solid rgba(0,0,0,0.04);
+            width: 100%;
+            max-width: 220px;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 26px 55px rgba(82, 63, 105, 0.12);
+        }
+        .card-image {
+            position: relative;
+            overflow: hidden;
+            height: 220px;
+        }
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform .4s ease;
+        }
+        .card:hover .card-image img {
+            transform: scale(1.06);
+        }
+        .card-admin {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 6px;
+            z-index: 2;
+        }
+        .admin-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.9);
+            background: rgba(0,0,0,0.35);
+            color: white;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .2s ease, transform .2s ease;
+        }
+        .admin-btn:hover {
+            background: rgba(0,0,0,0.55);
+            transform: translateY(-1px);
+        }
+        .card-body {
+            padding: 12px;
+        }
+        .card-title {
+            margin: 0 0 4px;
+            font-size: 15px;
+            font-weight: 900;
+            line-height: 1.3;
+            min-height: auto;
+            color: #222;
+        }
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 0;
+        }
+        .price-tag {
+            color: var(--pink);
+            font-size: 15px;
+            font-weight: 800;
+        }
+        .status-pill {
+            background: rgba(232, 30, 82, 0.08);
+            color: #b91c5d;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-actions button {
+            border: none;
+            background: var(--pink);
+            color: white;
+            border-radius: 16px;
+            padding: 10px 12px;
+            font-weight: 700;
+            cursor: pointer;
+            flex: 1;
+            font-size: 13px;
+        }
+        .card-actions .secondary {
+            background: #f5f5f5;
+            color: var(--text);
+        }
+        .card-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(255,255,255,0.92);
+            color: #333;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+        .card-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.38) 100%);
+        }
+        .card-overlay span {
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.68);
+            z-index: 2000;
+            justify-content: flex-start;
+            padding: 42px 16px 16px;
+        }
+        .modal-box {
+            background: white;
+            width: 100%;
+            max-width: 460px;
+            margin: 0 auto;
+            border-radius: 28px;
+            padding: 24px;
+            max-height: calc(100vh - 88px);
+            overflow-y: auto;
+        }
+        input, textarea, select {
+            width: 100%;
+            margin-top: 12px;
+            padding: 14px 16px;
+            border: 1px solid #ececec;
+            border-radius: 16px;
+            font-size: 14px;
+            outline: none;
+            background: #fafafa;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .btn-pub {
+            background: var(--pink);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            font-weight: 800;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .header-inner {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .header-actions input {
+                width: 100%;
+                max-width: none;
+            }
+            .card-actions {
+                flex-direction: column;
+            }
+            .card-actions button {
+                width: 100%;
+            }
+            #grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                padding: 0 12px 110px;
+            }
+        }
+        @media (max-width: 480px) {
+            .brand-logo {
+                width: 56px;
+                height: 56px;
+            }
+            .brand-text strong {
+                font-size: 16px;
+            }
+            .header-actions button,
+            .header-actions a {
+                min-width: unset;
+                padding: 10px 12px;
+                font-size: 13px;
+                height: 40px;
+            }
+            .card-image {
+                height: 150px;
+            }
+            .card-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+        #detailsScreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 3000;
+            overflow-y: auto;
+        }
+        .slider {
+            display: flex;
+            overflow-x: auto;
+            height: 360px;
+            background: #000;
+            scroll-snap-type: x mandatory;
+            position: relative;
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+        }
+        .slider img {
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            scroll-snap-align: center;
+        }
+        .details-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            z-index: 10;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.95);
+            color: var(--pink);
+            font-size: 24px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+        }
+        .details-close:hover {
+            background: white;
+        }
+        .dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 0 6px;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            transition: width .3s ease, background .3s ease;
+        }
+        .dot.active {
+            background: var(--pink);
+            width: 22px;
+            border-radius: 999px;
+        }
+        .v-body {
+            padding: 24px;
+            border-radius: 32px 32px 0 0;
+            background: #fff;
+            margin-top: -28px;
+            position: relative;
+            box-shadow: 0 -18px 45px rgba(82, 63, 105, 0.12);
+        }
+        .details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .details-header .status-pill {
+            margin-bottom: 14px;
+        }
+        .details-header h2 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 900;
+            line-height: 1.15;
+        }
+        .details-price {
+            color: var(--pink);
+            font-size: 24px;
+            font-weight: 900;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .details-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .detail-link a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(136,14,79,0.12);
+            background: rgba(136,14,79,0.06);
+            color: var(--pink);
+            font-weight: 700;
+            text-decoration: none;
+            transition: background .2s ease, transform .2s ease;
+        }
+        .detail-link a:hover {
+            background: rgba(136,14,79,0.1);
+        }
+        .detail-note {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: #f8f8f8;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .details-text {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            color: #444;
+            font-size: 15px;
+            margin-bottom: 18px;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            border-top: 1px solid #eee;
+        }
+        .btn-act {
+            text-align: center;
+            padding: 14px 12px;
+            border-radius: 16px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="header-actions">
+            <button class="icon-btn" onclick="location.href='profile.html'" title="الملف الشخصي">
+                <img id="navProfileImg" src="https://via.placeholder.com/44" alt="صورة المستخدم" class="profile-icon">
+            </button>
+            <button class="icon-btn" onclick="location.href='inbox.html'" title="الرسائل">
+                <img src="https://cdn-icons-png.flaticon.com/512/589/589708.png" alt="رسائل" class="message-icon">
+            </button>
+            <button class="add-btn" onclick="openPop()" title="إضافة منتج">+</button>
+        </div>
+        <div class="brand">
+            <img src="https://l.top4top.io/p_3771dubid0.png" alt="شعار كوزمتك" class="brand-logo">
+            <div class="brand-text"><strong>متجر كوزمتك</strong></div>
+        </div>
+    </div>
+</header>
+
+<div class="categories">
+    <button class="cat-btn active" data-filter="all" onclick="setCategory('all')">الكل</button>
+    <button class="cat-btn" data-filter="متوفر" onclick="setCategory('متوفر')">متوفر</button>
+    <button class="cat-btn" data-filter="نفذت الكمية" onclick="setCategory('نفذت الكمية')">نفذت الكمية</button>
+    <button class="cat-btn" data-filter="عروض" onclick="setCategory('عروض')">عروض</button>
+</div>
+
+<div id="grid"></div>
+
+<div class="modal" id="addPop" onclick="if(event.target.id==='addPop') hideModal()">
+    <div class="modal-box">
+        <button class="modal-close" onclick="hideModal()">×</button>
+        <h3 id="popTitle" style="text-align:center; color:var(--pink);">نشر منتج جديد</h3>
+        <input type="file" id="pCover" accept="image/*" onchange="previewFile(this)">
+        <img id="prev" style="width:80px; height:80px; object-fit:cover; display:none; margin:10px auto; border-radius:10px; border:2px solid var(--pink);">
+        <input type="file" id="pAlbum" accept="image/*" multiple onchange="document.getElementById('cText').innerText='تم اختيار '+this.files.length+' صور'">
+        <span id="cText" style="font-size:12px; color:var(--pink); font-weight:700;"></span>
+        <input type="text" id="pTitle" placeholder="اسم المنتج *">
+        <div style="display:flex; gap:10px;">
+            <input type="number" id="pPrice" placeholder="السعر (اختياري)">
+            <select id="pCurrency" style="width:100px;"><option value="د.ع">د.ع</option><option value="$">$</option></select>
+        </div>
+        <textarea id="pDesc" placeholder="تفاصيل المنتج..."></textarea>
+        <input type="url" id="pContact" placeholder="رابط التواصل">
+        <select id="pStatus"><option value="متوفر">متوفر</option><option value="نفذت الكمية">نفذت الكمية</option></select>
+        <input type="tel" id="pPhone" placeholder="رقم الاتصال">
+        <input type="tel" id="pWhatsapp" placeholder="رقم الواتساب">
+        <button class="btn-pub" id="btnPub" onclick="publish()">حفظ البيانات</button>
+        <button onclick="window.history.back()" style="width:100%; border:none; background:none; color:gray; margin-top:10px; font-weight:bold;">إلغاء</button>
+    </div>
+</div>
+
+<div id="detailsScreen">
+    <div class="slider" id="vSlider"></div>
+    <button class="details-close" onclick="closeDetails()">×</button>
+    <div class="dots" id="vDots"></div>
+    <div class="v-body">
+        <div class="details-header">
+            <div>
+                <div id="vStatus" class="status-pill"></div>
+                <h2 id="vTitle"></h2>
+            </div>
+            <div id="vPrice" class="details-price"></div>
+        </div>
+        <div id="vDesc" class="details-text"></div>
+        <div id="vDesc" class="details-text"></div>
+        <div class="details-meta">
+            <span id="vContact" class="detail-link"></span>
+            <span id="vPhone" class="detail-note"></span>
+            <span id="vWhatsapp" class="detail-note"></span>
+        </div>
+    </div>
+    <div class="bottom-nav">
+        <a id="linkWa" href="" class="btn-act" style="background:#25d366;">واتساب</a>
+        <a id="linkPh" href="" class="btn-act" style="background:#007bff;">اتصال</a>
+        <a id="linkSocial" href="#" class="btn-act" style="background:var(--pink);">مراسلة</a>
+    </div>
+</div>
+
+<script>
+    const userPhone = localStorage.getItem('app_user_phone');
+    if (!userPhone) location.href = 'login.html';
+
+    const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+    let currentEditId = null;
+    let globalSettings = {};
+    let productsCache = [];
+    let activeCategory = 'all';
+    let searchQuery = '';
+
+    db.ref('settings').on('value', snap => { 
+        globalSettings = snap.val() || {}; 
+        const navProfile = document.getElementById('navProfileImg');
+        if (globalSettings.img && navProfile) navProfile.src = globalSettings.img;
+    });
+
+    function applySearch() {
+        searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+        renderProducts();
+    }
+
+    function setCategory(category) {
+        activeCategory = category;
+        document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === category));
+        renderProducts();
+    }
+
+    function renderProducts() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        const filtered = productsCache.filter(d => {
+            const matchesCategory = activeCategory === 'all' || (d.status && d.status === activeCategory) || (activeCategory === 'عروض' && d.status && d.status.toLowerCase().includes('عرض'));
+            const matchesSearch = !searchQuery || (d.title && d.title.toLowerCase().includes(searchQuery)) || (d.desc && d.desc.toLowerCase().includes(searchQuery));
+            return matchesCategory && matchesSearch;
+        });
+
+        if (!filtered.length) {
+            grid.innerHTML = '<div style="grid-column:1/-1; padding: 40px 20px; text-align:center; color:#555;">عذرًا، لا توجد منتجات مطابقة للبحث</div>';
+            return;
+        }
+
+        filtered.forEach(d => {
+            const id = d.key;
+            const card = document.createElement('div');
+            card.className = 'card';
+            const statusText = d.status || 'متوفر';
+            const priceText = d.price ? `${d.price} ${d.currency || 'د.ع'}` : 'سعر حسب الطلب';
+            let adminBtns = '';
+            if (d.owner === userPhone) {
+                adminBtns = `
+                    <div class="card-admin">
+                        <button class="admin-btn del-btn" onclick="event.stopPropagation(); deleteItem('${id}')">✕</button>
+                        <button class="admin-btn edit-btn" onclick="event.stopPropagation(); openPop('${id}')">✎</button>
+                    </div>
+                `;
+            }
+            card.innerHTML = `
+                <div class="card-image">
+                    <img src="${d.image || 'https://via.placeholder.com/400x300?text=منتج'}" onclick='openDetails("${id}")'>
+                    ${adminBtns}
+                    <div class="card-overlay"><span>${statusText}</span></div>
+                </div>
+                <div class="card-body">
+                    <h3 class="card-title">${d.title || 'منتج بدون اسم'}</h3>
+                    <div class="card-meta">
+                        <span class="price-tag">${priceText}</span>
+                    </div>
+                </div>`;
+            grid.prepend(card);
+        });
+    }
+
+    db.ref('products').on('value', snap => {
+        productsCache = [];
+        snap.forEach(child => {
+            const data = child.val();
+            data.key = child.key;
+            productsCache.push(data);
+        });
+        renderProducts();
+    });
+
+    // مراقبة الرسائل الجديدة للتنبيه
+    db.ref('chats').on('value', snap => {
+        let hasNew = false;
+        snap.forEach(child => {
+            const chat = child.val();
+            if (chat.receiver === userPhone && chat.unread === true) hasNew = true;
+        });
+        document.getElementById('msgDot').style.display = hasNew ? 'block' : 'none';
+    });
+
+    async function publish() {
+        const btn = document.getElementById('btnPub');
+        const title = document.getElementById('pTitle').value;
+        if(!title) return alert("الاسم مطلوب");
+        btn.disabled = true; btn.innerText = "جاري الحفظ...";
+        let obj = {
+            title,
+            price: document.getElementById('pPrice').value,
+            currency: document.getElementById('pCurrency').value,
+            desc: document.getElementById('pDesc').value,
+            contactLink: document.getElementById('pContact').value,
+            status: document.getElementById('pStatus').value,
+            phone: document.getElementById('pPhone').value,
+            whatsapp: document.getElementById('pWhatsapp').value,
+            owner: userPhone,
+            time: Date.now()
+        };
+        const coverFile = document.getElementById('pCover').files[0];
+        const albumFiles = Array.from(document.getElementById('pAlbum').files || []);
+        const allFiles = coverFile ? [coverFile, ...albumFiles] : albumFiles;
+        if (allFiles.length) {
+            const processedImages = await Promise.all(allFiles.map(processImg));
+            obj.image = processedImages[0];
+            obj.album = processedImages;
+        }
+        const ref = currentEditId ? db.ref('products/' + currentEditId) : db.ref('products').push();
+        ref.update(obj).then(() => { btn.disabled = false; hideModal(); });
+    }
+
+    function processImg(file) {
+        return new Promise(res => {
+            const r = new FileReader(); r.readAsDataURL(file);
+            r.onload = e => {
+                const img = new Image(); img.src = e.target.result;
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    const s = 600 / img.width; c.width = 600; c.height = img.height * s;
+                    c.getContext('2d').drawImage(img, 0, 0, 600, c.height);
+                    res(c.toDataURL('image/jpeg', 0.7));
+                }
+            }
+        });
+    }
+
+    function deleteItem(id) { if(confirm('حذف؟')) db.ref('products/' + id).remove(); }
+
+    function openDetails(id) {
+        db.ref('products/' + id).once('value', snap => {
+            const data = snap.val();
+            const s = document.getElementById('vSlider'); const dots = document.getElementById('vDots');
+            s.innerHTML = ''; dots.innerHTML = '';
+            const imgs = data.album || [data.image];
+            imgs.forEach((img, i) => {
+                s.innerHTML += `<img src="${img}">`;
+                dots.innerHTML += `<div class="dot ${i==0?'active':''}"></div>`;
+            });
+            s.onscroll = () => {
+                const idx = Math.round(s.scrollLeft / s.offsetWidth);
+                document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i == idx));
+            };
+            document.getElementById('vTitle').innerText = data.title;
+            document.getElementById('vPrice').innerText = data.price ? data.price + " " + data.currency : "";
+            document.getElementById('vContact').innerHTML = data.contactLink ? `<a href="${data.contactLink}" target="_blank" rel="noopener noreferrer">رابط التواصل</a>` : '';
+            document.getElementById('vPhone').innerText = data.phone ? `الهاتف: ${data.phone}` : '';
+            document.getElementById('vWhatsapp').innerText = data.whatsapp ? `واتساب: ${data.whatsapp}` : '';
+            document.getElementById('vDesc').innerText = data.desc;
+            const st = document.getElementById('vStatus');
+            st.innerText = data.status; st.style.background = data.status=="متوفر"?"#e8f5e9":"#ffebee"; st.style.color = data.status=="متوفر"?"#2e7d32" : "#c62828";
+            
+            document.getElementById('linkWa').href = "https://wa.me/" + (data.whatsapp || "");
+            document.getElementById('linkPh').href = "tel:" + (data.phone || "");
+            
+            const btnSocial = document.getElementById('linkSocial');
+            btnSocial.onclick = function(e) {
+                e.preventDefault();
+                const targetPhone = data.owner || data.whatsapp || data.phone;
+                if(!targetPhone || targetPhone === userPhone) return;
+                const chatId = userPhone < targetPhone ? userPhone + "_" + targetPhone : targetPhone + "_" + userPhone;
+                db.ref('chats/' + chatId).update({ receiver: targetPhone, unread: true });
+                location.href = `chat.html?chatId=${chatId}&receiver=${targetPhone}`;
+            };
+
+            document.getElementById('detailsScreen').style.display = 'block';
+            window.history.pushState({p:1}, '');
+        });
+    }
+
+    function closeDetails() {
+        document.getElementById('detailsScreen').style.display = 'none';
+        window.history.back();
+    }
+
+    function openPop(id = null) {
+        if (id) {
+            currentEditId = id;
+            document.getElementById('popTitle').innerText = "تعديل المنتج";
+            db.ref('products/' + id).once('value', snap => {
+                const d = snap.val();
+                document.getElementById('pTitle').value = d.title || '';
+                document.getElementById('pPrice').value = d.price || '';
+                document.getElementById('pCurrency').value = d.currency || 'د.ع';
+                document.getElementById('pDesc').value = d.desc || '';
+                document.getElementById('pContact').value = d.contactLink || '';
+                document.getElementById('pStatus').value = d.status || 'متوفر';
+                document.getElementById('pPhone').value = d.phone || '';
+                document.getElementById('pWhatsapp').value = d.whatsapp || '';
+                document.getElementById('prev').src = d.image;
+                document.getElementById('prev').style.display = 'block';
+                document.getElementById('cText').innerText = d.album ? 'تم اختيار ' + d.album.length + ' صور' : '';
+            });
+        } else {
+            currentEditId = null;
+            document.getElementById('popTitle').innerText = "نشر منتج جديد";
+            document.querySelectorAll('#addPop input:not([type="file"]), #addPop textarea').forEach(i => i.value = '');
+            document.getElementById('pCover').value = '';
+            document.getElementById('pAlbum').value = '';
+            document.getElementById('pContact').value = '';
+            document.getElementById('cText').innerText = '';
+            document.getElementById('prev').style.display = 'none';
+        }
+        document.getElementById('addPop').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        window.history.pushState({p:1}, '');
+    }
+
+    function hideModal() {
+        document.getElementById('addPop').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        currentEditId = null;
+    }
+
+    window.onpopstate = () => {
+        document.querySelectorAll('.modal, #detailsScreen').forEach(m => m.style.display='none');
+        document.body.style.overflow = 'auto';
+    };
+
+    function previewFile(i) { const r = new FileReader(); r.onload = e => { const p = document.getElementById('prev'); p.src = e.target.result; p.style.display='block'; }; r.readAsDataURL(i.files[0]); }
+</script>
+</body>
+</html>

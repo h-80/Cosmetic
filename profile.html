@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Alfaham</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root {
+            --pink: #880e4f;
+            --accent: #ad1457;
+            --bg: #f4eff8;
+            --surface: #ffffff;
+            --border: #ece8f2;
+            --text: #222;
+            --muted: #6f6f7b;
+            --shadow: 0 18px 45px rgba(82, 63, 105, 0.08);
+        }
+        * {
+            font-family: 'Cairo', sans-serif;
+            box-sizing: border-box;
+            outline: none;
+        }
+        body {
+            background: linear-gradient(180deg, #f8f3fb 0%, #fbfbfb 100%);
+            margin: 0;
+            color: var(--text);
+            padding-bottom: 60px;
+        }
+        .profile-header {
+            height: 210px;
+            background: linear-gradient(135deg, var(--pink), var(--accent));
+            border-radius: 0 0 36px 36px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 18px 45px rgba(136, 14, 79, 0.18);
+        }
+        .profile-header::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.25), transparent 28%),
+                        radial-gradient(circle at 80% 35%, rgba(255,255,255,0.18), transparent 24%);
+        }
+        .header-top {
+            position: absolute;
+            inset: 18px 18px auto 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 2;
+        }
+        .close-btn {
+            color: white;
+            text-decoration: none;
+            font-weight: 800;
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.25);
+            backdrop-filter: blur(10px);
+        }
+        .profile-card {
+            max-width: 520px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .avatar-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: -70px auto 0;
+            z-index: 2;
+            overflow: hidden;
+            border-radius: 50%;
+            background: #ece8f4;
+        }
+        #userAvatar {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 20px 40px rgba(82, 63, 105, 0.14);
+            background: #ece8f4;
+        }
+        .edit-avatar-btn {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            background: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.16);
+            cursor: pointer;
+            border: none;
+            font-size: 18px;
+            color: var(--pink);
+        }
+        .profile-details {
+            text-align: center;
+            padding: 22px 0 14px;
+        }
+        h2 {
+            margin: 0;
+            font-weight: 900;
+            font-size: 26px;
+            color: #161622;
+        }
+        .store-name {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 18px;
+            border-radius: 999px;
+            background: #ffffff;
+            color: var(--pink);
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 18px 45px rgba(136, 14, 79, 0.08);
+        }
+        .owner-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(12px);
+        }
+        .section-card {
+            background: white;
+            border-radius: 30px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+            margin-top: 18px;
+        }
+        .section-title {
+            margin: 0 0 18px;
+            font-size: 16px;
+            font-weight: 900;
+            color: #1c1c2b;
+        }
+        .visitor-actions,
+        .owner-settings {
+            display: none;
+            gap: 12px;
+            flex-direction: column;
+        }
+        .btn-message {
+            width: 100%;
+            background: var(--pink);
+            color: white;
+            border: none;
+            padding: 16px 18px;
+            border-radius: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 16px 35px rgba(136, 14, 79, 0.18);
+        }
+        .btn-message:hover {
+            transform: translateY(-1px);
+        }
+        .input-group {
+            margin-bottom: 16px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #6f6f7b;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: #faf7ff;
+            font-size: 15px;
+            color: #242424;
+        }
+        .save-btn {
+            background: var(--pink);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 16px 32px rgba(136, 14, 79, 0.16);
+        }
+        .save-btn:hover {
+            transform: translateY(-1px);
+        }
+        @media (max-width: 768px) {
+            .profile-header { height: 190px; }
+            .profile-card { padding: 0 16px; }
+            .avatar-container { width: 124px; height: 124px; margin:-62px auto 0; }
+            #userAvatar { width: 124px; height: 124px; }
+            .header-top { inset: 14px 14px auto 14px; flex-wrap: wrap; gap: 10px; }
+            .close-btn { padding: 10px 14px; }
+            .owner-badge { width: 100%; justify-content: center; }
+            .section-card { padding: 18px; }
+            .visitor-actions, .owner-settings { width: 100%; }
+        }
+        @media (max-width: 480px) {
+            .profile-header { height: 170px; }
+            .avatar-container { width: 108px; height: 108px; margin:-54px auto 0; }
+            #userAvatar { width: 108px; height: 108px; }
+            h2 { font-size: 22px; }
+            .store-name { font-size: 13px; padding: 8px 14px; }
+            .section-card { padding: 18px; }
+            .btn-message { padding: 14px 16px; font-size: 14px; }
+            .header-top { display: grid; grid-template-columns: 1fr; gap: 10px; text-align: center; }
+            .close-btn { width: 100%; }
+            .owner-badge { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="profile-header">
+        <div class="header-top">
+            <a href="index.html" class="close-btn">✕ إغلاق</a>
+            <div id="ownerBadge" class="owner-badge">المالك</div>
+        </div>
+    </div>
+
+    <div class="profile-card">
+        <div class="avatar-container">
+            <img id="userAvatar" src="https://via.placeholder.com/150" alt="صورة المستخدم" onerror="this.onerror=null; this.src='https://via.placeholder.com/150/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9'">
+            <input type="file" id="avatarInput" hidden accept="image/*" onchange="updateAvatar(this)">
+            <button class="edit-avatar-btn" id="editAvatarBtn" style="display:none;" onclick="document.getElementById('avatarInput').click()">✎</button>
+        </div>
+        <div class="profile-details">
+            <h2 id="dispName">...</h2>
+            <span class="store-name" id="dispStore">...</span>
+        </div>
+
+        <div id="visitorView" class="visitor-actions">
+            <a href="#" onclick="goToChat(); return false;" class="btn-message">✉ مراسلة الآن</a>
+        </div>
+
+        <div id="ownerView" class="owner-settings section-card">
+            <div class="section-title">إعدادات حساب المتجر</div>
+            <div class="input-group"><label>الاسم</label><input type="text" id="inName"></div>
+            <div class="input-group"><label>اسم المتجر</label><input type="text" id="inStore"></div>
+            <div class="input-group"><label>رابط التواصل</label><input type="url" id="inContact" placeholder="https://"></div>
+            <div class="input-group"><label>رقم الواتساب</label><input type="tel" id="inWa"></div>
+            <button class="save-btn" id="saveBtn" onclick="saveProfile()">حفظ التعديلات</button>
+        </div>
+    </div>
+
+    <script>
+        const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(config);
+        const db = firebase.database();
+
+        const myPhone = localStorage.getItem('app_user_phone');
+        const urlParams = new URLSearchParams(window.location.search);
+        // إذا وجد رقم في الرابط يعرضه، وإلا يعرض حسابي الشخصي
+        const targetUser = urlParams.get('id') || myPhone;
+
+        window.onload = function() {
+            if (!myPhone) { location.href = 'login.html'; return; }
+
+            db.ref('users/' + targetUser).on('value', snap => {
+                const data = snap.val() || {};
+                document.getElementById('dispName').innerText = data.name || "مستخدم";
+                document.getElementById('dispStore').innerText = data.store || "";
+                document.getElementById('userAvatar').alt = data.name ? data.name + ' - الصورة الشخصية' : 'صورة المستخدم';
+                document.getElementById('userAvatar').src = data.img || 'https://via.placeholder.com/150/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9';
+
+                // التبديل بين وضع "التعديل" و "العرض" برمجياً
+                if (targetUser === myPhone) {
+                    document.getElementById('ownerView').style.display = 'flex';
+                    document.getElementById('ownerBadge').style.display = 'inline-flex';
+                    document.getElementById('editAvatarBtn').style.display = 'flex';
+                    document.getElementById('inName').value = data.name || "";
+                    document.getElementById('inStore').value = data.store || "";
+                    document.getElementById('inContact').value = data.contactLink || "";
+                    document.getElementById('inWa').value = data.wa || myPhone;
+                } else {
+                    document.getElementById('visitorView').style.display = 'flex';
+                    document.getElementById('ownerBadge').style.display = 'none';
+                }
+            });
+        };
+
+        function goToChat() {
+            const chatId = myPhone < targetUser ? myPhone + "_" + targetUser : targetUser + "_" + myPhone;
+            location.href = `chat.html?chatId=${chatId}&receiver=${targetUser}`;
+        }
+
+        async function saveProfile() {
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "جاري الحفظ...";
+            const name = document.getElementById('inName').value;
+            const store = document.getElementById('inStore').value;
+            const contactLink = document.getElementById('inContact').value;
+            const wa = document.getElementById('inWa').value;
+            const img = document.getElementById('userAvatar').src;
+
+            await db.ref('users/' + myPhone).update({ name, store, contactLink, wa, img });
+            btn.innerText = "حفظ التعديلات";
+            alert("تم الحفظ!");
+        }
+
+        function updateAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => { document.getElementById('userAvatar').src = e.target.result; };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</body>
+</html>
