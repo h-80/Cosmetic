@@ -139,7 +139,7 @@
     <p class="login-subtitle">سجل بياناتك بسرعة وابدأ في إدارة متجرك الآن.</p>
 
     <div class="avatar-upload" onclick="document.getElementById('fileInput').click()">
-        <img id="preview" src="https://via.placeholder.com/100">
+        <img id="preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
         <div class="avatar-label">إضافة صورة</div>
         <input type="file" id="fileInput" hidden accept="image/*" onchange="previewImg(this)">
     </div>
@@ -160,7 +160,11 @@
     function previewImg(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
-            reader.onload = e => document.getElementById('preview').src = e.target.result;
+            reader.onload = e => {
+                const preview = document.getElementById('preview');
+                preview.src = e.target.result;
+                preview.dataset.uploaded = 'true';
+            };
             reader.readAsDataURL(input.files[0]);
         }
     }
@@ -168,7 +172,8 @@
     async function startApp() {
         const name = document.getElementById('userName').value;
         const phone = document.getElementById('userPhone').value;
-        const img = document.getElementById('preview').src;
+        const preview = document.getElementById('preview');
+        const img = preview.dataset.uploaded === 'true' ? preview.src : '';
 
         if(!name || !phone) return alert("يرجى ملء جميع الحقول");
 

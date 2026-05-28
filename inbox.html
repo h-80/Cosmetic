@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>رسائل كوزمتك</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root { --pink: #880e4f; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
@@ -109,7 +109,7 @@
             item.className = 'chat-item';
             item.onclick = () => openChat(res.cid, res.otherPhone, res.name, res.img);
             item.innerHTML = `
-                <img src="${res.img}" class="user-img-list" onerror="this.onerror=null;this.src='https://via.placeholder.com/50/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9'">
+                <img src="${res.img}" loading="lazy" class="user-img-list" onerror="this.onerror=null;this.src='https://via.placeholder.com/50/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9'">
                 <div class="chat-info">
                     <span class="user-name">${res.name}</span>
                     <span class="last-msg">${res.chat.lastMsg || 'اضغط لبدء الدردشة'}</span>

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cosmetic Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root {
             --pink: #880e4f;
@@ -42,6 +42,17 @@
             min-height: 66px;
         }
         .header-actions { order: 2; }
+        .header-actions input {
+            width: 220px;
+            max-width: 220px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: none;
+            outline: none;
+            background: rgba(255,255,255,0.12);
+            color: white;
+            font-size: 14px;
+        }
         .brand { order: 1; }
         .brand {
             display: flex;
@@ -64,6 +75,19 @@
             letter-spacing: 0.3px;
             color: white;
         }
+        /* Modern button base */
+        .btn {
+            border: none;
+            border-radius: 14px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 800;
+            transition: transform .14s ease, box-shadow .14s ease, opacity .14s ease;
+            box-shadow: 0 8px 20px rgba(82,63,105,0.08);
+        }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background: var(--pink); color: white; }
+        .icon-btn { width:46px; height:46px; border-radius:12px; }
         .header-actions {
             display: flex;
             align-items: center;
@@ -173,27 +197,7 @@
             font-size: 14px;
             line-height: 1.6;
         }
-        .categories {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            padding: 12px 14px 14px;
-            margin-bottom: 4px;
-        }
-        .cat-btn {
-            border: none;
-            background: white;
-            color: var(--muted);
-            padding: 10px 14px;
-            border-radius: 14px;
-            box-shadow: 0 12px 24px rgba(136, 14, 79, 0.06);
-            cursor: pointer;
-            font-size: 13px;
-        }
-        .cat-btn.active {
-            background: var(--pink);
-            color: white;
-        }
+        /* Categories UI removed per user request */
         #grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -593,12 +597,17 @@
 <header>
     <div class="header-inner">
         <div class="header-actions">
-            <button class="icon-btn" onclick="location.href='profile.html'" title="الملف الشخصي">
+            <button class="icon-btn" id="profileBtn" onclick="openProfile()" title="الملف الشخصي">
                 <img id="navProfileImg" src="https://via.placeholder.com/44" alt="صورة المستخدم" class="profile-icon">
             </button>
-            <button class="icon-btn" onclick="location.href='inbox.html'" title="الرسائل">
+            <button class="icon-btn" onclick="location.href='inbox.html'" title="الرسائل" style="position:relative;">
                 <img src="https://cdn-icons-png.flaticon.com/512/589/589708.png" alt="رسائل" class="message-icon">
+                <span id="msgDot" style="display:none; position:absolute; top:6px; right:6px; width:10px; height:10px; border-radius:50%; background:#ff3b30; box-shadow:0 0 0 2px rgba(255,255,255,0.9);"></span>
             </button>
+            <button class="icon-btn" id="searchToggle" title="بحث" onclick="toggleSearch()" aria-expanded="false">
+                <img src="https://cdn-icons-png.flaticon.com/512/622/622669.png" alt="بحث" style="width:22px; height:22px; filter:invert(1);">
+            </button>
+            <input id="searchInput" type="search" placeholder="بحث..." oninput="applySearch()" style="display:none;">
             <button class="add-btn" onclick="openPop()" title="إضافة منتج">+</button>
         </div>
         <div class="brand">
@@ -608,12 +617,7 @@
     </div>
 </header>
 
-<div class="categories">
-    <button class="cat-btn active" data-filter="all" onclick="setCategory('all')">الكل</button>
-    <button class="cat-btn" data-filter="متوفر" onclick="setCategory('متوفر')">متوفر</button>
-    <button class="cat-btn" data-filter="نفذت الكمية" onclick="setCategory('نفذت الكمية')">نفذت الكمية</button>
-    <button class="cat-btn" data-filter="عروض" onclick="setCategory('عروض')">عروض</button>
-</div>
+<!-- Categories UI removed -->
 
 <div id="grid"></div>
 
@@ -653,7 +657,6 @@
             <div id="vPrice" class="details-price"></div>
         </div>
         <div id="vDesc" class="details-text"></div>
-        <div id="vDesc" class="details-text"></div>
         <div class="details-meta">
             <span id="vContact" class="detail-link"></span>
             <span id="vPhone" class="detail-note"></span>
@@ -680,10 +683,12 @@
     let activeCategory = 'all';
     let searchQuery = '';
 
-    db.ref('settings').on('value', snap => { 
-        globalSettings = snap.val() || {}; 
+    db.ref('users/' + userPhone).on('value', snap => {
+        const userData = snap.val() || {};
         const navProfile = document.getElementById('navProfileImg');
-        if (globalSettings.img && navProfile) navProfile.src = globalSettings.img;
+        if (navProfile) {
+            navProfile.src = userData.img || 'https://via.placeholder.com/44/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9';
+        }
     });
 
     function applySearch() {
@@ -728,7 +733,7 @@
             }
             card.innerHTML = `
                 <div class="card-image">
-                    <img src="${d.image || 'https://via.placeholder.com/400x300?text=منتج'}" onclick='openDetails("${id}")'>
+                            <img src="${d.image || 'https://via.placeholder.com/400x300?text=منتج'}" loading="lazy" onclick='openDetails("${id}")' alt="صورة المنتج">
                     ${adminBtns}
                     <div class="card-overlay"><span>${statusText}</span></div>
                 </div>
@@ -899,6 +904,55 @@
     };
 
     function previewFile(i) { const r = new FileReader(); r.onload = e => { const p = document.getElementById('prev'); p.src = e.target.result; p.style.display='block'; }; r.readAsDataURL(i.files[0]); }
+
+    function toggleSearch(show) {
+        const input = document.getElementById('searchInput');
+        const btn = document.getElementById('searchToggle');
+        const isVisible = input.style.display !== 'none' && input.style.display !== '';
+        if (typeof show === 'undefined') show = !isVisible;
+        if (show) {
+            input.style.display = 'block';
+            btn.setAttribute('aria-expanded', 'true');
+            setTimeout(() => input.focus(), 10);
+        } else {
+            input.style.display = 'none';
+            btn.setAttribute('aria-expanded', 'false');
+            input.value = '';
+            applySearch();
+        }
+    }
+
+    document.addEventListener('click', function(e){
+        const ha = document.querySelector('.header-actions');
+        const input = document.getElementById('searchInput');
+        if (!ha.contains(e.target) && input && input.style.display === 'block') {
+            toggleSearch(false);
+        }
+    });
+
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') toggleSearch(false); });
+
+    function openProfile() {
+        const btn = document.getElementById('profileBtn');
+        // quick visual feedback
+        const ov = document.createElement('div');
+        ov.id = 'prefetchOverlay';
+        ov.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:4000;';
+        ov.innerHTML = '<div style="background:rgba(255,255,255,0.98);padding:18px 22px;border-radius:12px;display:flex;align-items:center;gap:12px;"><div style="width:30px;height:30px;border-radius:50%;border:4px solid var(--pink);border-top-color:transparent;animation:spin 0.9s linear infinite"></div><div style="font-weight:700;color:#222">جاري تحميل الملف الشخصي...</div></div>';
+        document.body.appendChild(ov);
+
+        // add keyframes for spinner if not present
+        if (!document.getElementById('spinStyle')) {
+            const s = document.createElement('style'); s.id = 'spinStyle'; s.innerHTML = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}'; document.head.appendChild(s);
+        }
+
+        if (!userPhone) { location.href = 'login.html'; return; }
+        db.ref('users/' + userPhone).once('value').then(snap => {
+            const data = snap.val() || {};
+            try { localStorage.setItem('prefetched_profile', JSON.stringify(data)); } catch (e) {}
+            location.href = 'profile.html';
+        }).catch(() => { location.href = 'profile.html'; });
+    }
 </script>
 </body>
 </html>

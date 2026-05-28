@@ -89,14 +89,14 @@
             box-shadow: 0 20px 40px rgba(82, 63, 105, 0.14);
             background: #ece8f4;
         }
-        .edit-avatar-btn {
+        .edit-avatar-btn,
+        .reset-avatar-btn {
             position: absolute;
             bottom: 4px;
-            left: 4px;
-            background: white;
-            border-radius: 50%;
             width: 40px;
             height: 40px;
+            background: white;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -106,6 +106,8 @@
             font-size: 18px;
             color: var(--pink);
         }
+        .edit-avatar-btn { left: 4px; }
+        .reset-avatar-btn { right: 4px; }
         .profile-details {
             text-align: center;
             padding: 22px 0 14px;
@@ -146,6 +148,10 @@
             box-shadow: var(--shadow);
             margin-top: 18px;
         }
+        /* Skeleton loader */
+        .loading .skeleton-line { height: 14px; background: linear-gradient(90deg,#eee,#f5f5f8,#eee); border-radius: 8px; margin: 8px 0; animation: pulse 1.4s infinite; }
+        .loading #userAvatar { background: linear-gradient(90deg,#eee,#f5f5f8,#eee); }
+        @keyframes pulse { 0%{background-position:-200px 0} 100%{background-position:200px 0} }
         .section-title {
             margin: 0 0 18px;
             font-size: 16px;
@@ -246,9 +252,10 @@
 
     <div class="profile-card">
         <div class="avatar-container">
-            <img id="userAvatar" src="https://via.placeholder.com/150" alt="صورة المستخدم" onerror="this.onerror=null; this.src='https://via.placeholder.com/150/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9'">
+            <img id="userAvatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="صورة المستخدم" onerror="this.onerror=null; this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='">
             <input type="file" id="avatarInput" hidden accept="image/*" onchange="updateAvatar(this)">
             <button class="edit-avatar-btn" id="editAvatarBtn" style="display:none;" onclick="document.getElementById('avatarInput').click()">✎</button>
+            <button class="reset-avatar-btn" id="resetAvatarBtn" style="display:none;" onclick="resetAvatar()">🗑</button>
         </div>
         <div class="profile-details">
             <h2 id="dispName">...</h2>
@@ -263,7 +270,11 @@
             <div class="section-title">إعدادات حساب المتجر</div>
             <div class="input-group"><label>الاسم</label><input type="text" id="inName"></div>
             <div class="input-group"><label>اسم المتجر</label><input type="text" id="inStore"></div>
-            <div class="input-group"><label>رابط التواصل</label><input type="url" id="inContact" placeholder="https://"></div>
+            <div class="input-group">
+                <label>رابط التواصل</label>
+                <input type="url" id="inContact" placeholder="https://" aria-label="رابط الإنستغرام أو فيسبوك">
+                <div style="font-size:12px; color:var(--muted); margin-top:8px;">ضع رابط صفحتك على انستغرام أو فيسبوك (مثلاً https://instagram.com/username)</div>
+            </div>
             <div class="input-group"><label>رقم الواتساب</label><input type="tel" id="inWa"></div>
             <button class="save-btn" id="saveBtn" onclick="saveProfile()">حفظ التعديلات</button>
         </div>
@@ -282,27 +293,63 @@
         window.onload = function() {
             if (!myPhone) { location.href = 'login.html'; return; }
 
-            db.ref('users/' + targetUser).on('value', snap => {
-                const data = snap.val() || {};
-                document.getElementById('dispName').innerText = data.name || "مستخدم";
-                document.getElementById('dispStore').innerText = data.store || "";
-                document.getElementById('userAvatar').alt = data.name ? data.name + ' - الصورة الشخصية' : 'صورة المستخدم';
-                document.getElementById('userAvatar').src = data.img || 'https://via.placeholder.com/150/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9';
+                // show skeleton until live data arrives
+                document.querySelector('.profile-card').classList.add('loading');
 
-                // التبديل بين وضع "التعديل" و "العرض" برمجياً
-                if (targetUser === myPhone) {
-                    document.getElementById('ownerView').style.display = 'flex';
-                    document.getElementById('ownerBadge').style.display = 'inline-flex';
-                    document.getElementById('editAvatarBtn').style.display = 'flex';
-                    document.getElementById('inName').value = data.name || "";
-                    document.getElementById('inStore').value = data.store || "";
-                    document.getElementById('inContact').value = data.contactLink || "";
-                    document.getElementById('inWa').value = data.wa || myPhone;
-                } else {
-                    document.getElementById('visitorView').style.display = 'flex';
-                    document.getElementById('ownerBadge').style.display = 'none';
-                }
-            });
+                // If we have prefetched data from index, show it immediately for snappy UX
+                try {
+                    const cached = localStorage.getItem('prefetched_profile');
+                    if (cached) {
+                        const data = JSON.parse(cached) || {};
+                        document.getElementById('dispName').innerText = data.name || "مستخدم";
+                        document.getElementById('dispStore').innerText = data.store || "";
+                        const avatar = document.getElementById('userAvatar');
+                        avatar.alt = data.name ? data.name + ' - الصورة الشخصية' : 'صورة المستخدم';
+                        avatar.src = data.img || 'https://via.placeholder.com/150/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9';
+                        avatar.dataset.removed = 'false';
+                        if (targetUser === myPhone) {
+                            document.getElementById('ownerView').style.display = 'flex';
+                            document.getElementById('ownerBadge').style.display = 'inline-flex';
+                            document.getElementById('editAvatarBtn').style.display = 'flex';
+                            document.getElementById('inName').value = data.name || "";
+                            document.getElementById('inStore').value = data.store || "";
+                            document.getElementById('inContact').value = data.contactLink || "";
+                            document.getElementById('inWa').value = data.wa || myPhone;
+                        } else {
+                            document.getElementById('visitorView').style.display = 'flex';
+                            document.getElementById('ownerBadge').style.display = 'none';
+                        }
+                    }
+                } catch (e) { /* ignore parse errors */ }
+                // remove cached prefetch so future loads are fresh
+                try { localStorage.removeItem('prefetched_profile'); } catch(e){}
+
+                // then attach live listener to update UI when Firebase responds
+                db.ref('users/' + targetUser).on('value', snap => {
+                    const data = snap.val() || {};
+                    document.getElementById('dispName').innerText = data.name || "مستخدم";
+                    document.getElementById('dispStore').innerText = data.store || "";
+                    const avatar = document.getElementById('userAvatar');
+                    avatar.alt = data.name ? data.name + ' - الصورة الشخصية' : 'صورة المستخدم';
+                    avatar.src = data.img || 'https://via.placeholder.com/150/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9';
+                    avatar.dataset.removed = 'false';
+
+                    // التبديل بين وضع "التعديل" و "العرض" برمجياً
+                    if (targetUser === myPhone) {
+                        document.getElementById('ownerView').style.display = 'flex';
+                        document.getElementById('ownerBadge').style.display = 'inline-flex';
+                        document.getElementById('editAvatarBtn').style.display = 'flex';
+                        document.getElementById('inName').value = data.name || "";
+                        document.getElementById('inStore').value = data.store || "";
+                        document.getElementById('inContact').value = data.contactLink || "";
+                        document.getElementById('inWa').value = data.wa || myPhone;
+                    } else {
+                        document.getElementById('visitorView').style.display = 'flex';
+                        document.getElementById('ownerBadge').style.display = 'none';
+                    }
+                    // remove skeleton once live data applied
+                    document.querySelector('.profile-card').classList.remove('loading');
+                });
         };
 
         function goToChat() {
@@ -317,17 +364,32 @@
             const store = document.getElementById('inStore').value;
             const contactLink = document.getElementById('inContact').value;
             const wa = document.getElementById('inWa').value;
-            const img = document.getElementById('userAvatar').src;
+            const avatar = document.getElementById('userAvatar');
+            let img = avatar.src;
+            if (avatar.dataset.removed === 'true') {
+                img = '';
+            }
 
             await db.ref('users/' + myPhone).update({ name, store, contactLink, wa, img });
+            localStorage.setItem('alfaham_profile', JSON.stringify({ name, store, contactLink, wa, img }));
             btn.innerText = "حفظ التعديلات";
             alert("تم الحفظ!");
+        }
+
+        function resetAvatar() {
+            const avatar = document.getElementById('userAvatar');
+            avatar.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+            avatar.dataset.removed = 'true';
         }
 
         function updateAvatar(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = (e) => { document.getElementById('userAvatar').src = e.target.result; };
+                reader.onload = (e) => {
+                    const avatar = document.getElementById('userAvatar');
+                    avatar.src = e.target.result;
+                    avatar.dataset.removed = 'false';
+                };
                 reader.readAsDataURL(input.files[0]);
             }
         }

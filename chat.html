@@ -5,28 +5,31 @@
     <title>المحادثة</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root { --pink: #880e4f; }
         * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
-        body { margin: 0; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; }
+        body { margin: 0; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
         header { background: var(--pink); color: white; padding: 15px; text-align: center; font-weight: bold; }
-        #chatBox { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.6; }
-        .sent { align-self: flex-start; background: var(--pink); color: white; border-bottom-right-radius: 2px; }
-        .received { align-self: flex-end; background: white; color: #333; border-bottom-left-radius: 2px; }
-        .input-area { background: white; padding: 10px; display: flex; gap: 10px; }
-        input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; }
-        button { background: var(--pink); color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; }
+        #chatBox { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: calc(90px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 78%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.5; box-shadow: 0 6px 18px rgba(11,11,20,0.04); word-wrap: break-word; }
+        .sent { align-self: flex-start; background: linear-gradient(135deg,var(--pink),#ad1457); color: white; border-bottom-right-radius: 6px; }
+        .received { align-self: flex-end; background: #fff; color: #222; border-bottom-left-radius: 6px; }
+        .input-area { background: white; padding: 10px; display: flex; gap: 10px; box-shadow: 0 -6px 20px rgba(0,0,0,0.06); position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; align-items: center; padding-left: 14px; padding-right: 14px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+        input { flex: 1; border: 1px solid #eee; padding: 12px 14px; border-radius: 22px; outline: none; }
+        .btn { border: none; border-radius: 12px; padding: 10px 14px; cursor: pointer; font-weight: 800; box-shadow: 0 8px 20px rgba(82,63,105,0.06); }
+        .btn-primary { background: var(--pink); color: white; }
+        .attach-btn { width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; background:#f5f5f7; }
     </style>
 </head>
 <body>
     <header>المحادثة</header>
     <div id="chatBox"></div>
     <div class="input-area">
-        <input type="text" id="msgInput" placeholder="اكتب رسالتك هنا...">
-        <button onclick="send()">إرسال</button>
+        <label class="attach-btn" title="إرفاق صورة"><input id="attachFile" type="file" accept="image/*" style="display:none;"></label>
+        <input type="text" id="msgInput" placeholder="اكتب رسالتك هنا..." aria-label="حقل كتابة الرسالة">
+        <button class="btn btn-primary" onclick="send()">إرسال</button>
     </div>
 
     <script>
@@ -71,6 +74,15 @@
             });
             document.getElementById('msgInput').value = '';
         }
+
+        // Ensure chat scrolls to bottom when focusing input and on resize (helps mobile keyboard)
+        const chatBox = document.getElementById('chatBox');
+        const msgInput = document.getElementById('msgInput');
+        function scrollToBottomSoon() { setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 220); }
+        msgInput.addEventListener('focus', scrollToBottomSoon);
+        window.addEventListener('resize', scrollToBottomSoon);
+
+        document.getElementById('attachFile').addEventListener('change', function(){ if(this.files && this.files[0]) { alert('اختيار ملف مبدئي - لم يتم رفعه (واجهة)'); } });
     </script>
 </body>
 </html>
