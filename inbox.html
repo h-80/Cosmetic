@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رسائل كوزمتك</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --pink: #880e4f; }
+        * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
+        body { background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        header { 
+            background: var(--pink); color: white; padding: 10px 15px; 
+            display: flex; align-items: center; gap: 10px;
+            font-weight: bold; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            min-height: 60px;
+        }
+        .back-btn { cursor: pointer; font-size: 20px; padding-left: 10px; }
+        
+        /* صورة الشخص في الهيدر */
+        #headerImg { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid white; display: none; background: #f2f2f7; }
+
+        #inboxView { flex: 1; overflow-y: auto; }
+        .chat-item { 
+            background: white; margin: 8px 12px; padding: 12px; border-radius: 15px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
+        }
+        .user-img-list { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #eee; }
+        .chat-info { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .user-name { font-weight: 700; color: #333; font-size: 14px; }
+        .last-msg { font-size: 12px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .unread-dot { width: 10px; height: 10px; background: #ff1744; border-radius: 50%; margin-right: 10px; }
+
+        #chatView { flex: 1; display: none; flex-direction: column; background: #e5ddd5; }
+        #msgBox { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 80%; padding: 8px 12px; border-radius: 15px; font-size: 14px; line-height: 1.5; }
+        .sent { align-self: flex-start; background: #880e4f; color: white; border-bottom-right-radius: 2px; }
+        .received { align-self: flex-end; background: white; color: #333; border-bottom-left-radius: 2px; }
+        
+        .input-area { background: white; padding: 10px; display: flex; gap: 8px; align-items: center; }
+        #mInput { flex: 1; border: 1px solid #ddd; padding: 10px 15px; border-radius: 20px; outline: none; }
+        #sendBtn { background: var(--pink); color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="back-btn" id="btnBack" onclick="goBack()">❮</div>
+    <img id="headerImg" src="" alt="صورة المستخدم" onerror="this.onerror=null; this.src='https://via.placeholder.com/50/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9'">
+    <span id="headerTitle">رسائلي</span>
+</header>
+
+<div id="inboxView">
+    <div id="listContent"></div>
+</div>
+
+<div id="chatView">
+    <div id="msgBox"></div>
+    <div class="input-area">
+        <input type="text" id="mInput" placeholder="اكتب رسالة...">
+        <button id="sendBtn" onclick="sendMsg()">إرسال</button>
+    </div>
+</div>
+
+<script>
+    const userPhone = localStorage.getItem('app_user_phone');
+    const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    let activeChatId = null;
+    let activeReceiver = null;
+
+    if (!userPhone) location.href = 'login.html';
+
+    // دالة لجلب بيانات المستخدم (الاسم والصورة)
+    async function getUserData(phone) {
+        const snap = await db.ref('users/' + phone).once('value');
+        const data = snap.val() || {};
+        return {
+            name: data.name || "مستخدم " + phone,
+            img: data.img || "https://via.placeholder.com/50"
+        };
+    }
+
+    // جلب قائمة المحادثات
+    db.ref('chats').on('value', async snap => {
+        const list = document.getElementById('listContent');
+        list.innerHTML = '';
+        const promises = [];
+
+        snap.forEach(child => {
+            const chat = child.val();
+            const cid = child.key;
+            if (cid.includes(userPhone)) {
+                const otherPhone = cid.split('_').find(p => p !== userPhone);
+                promises.push(getUserData(otherPhone).then(user => ({ ...user, chat, cid, otherPhone })));
+            }
+        });
+
+        const results = await Promise.all(promises);
+        results.forEach(res => {
+            const isUnread = (res.chat.receiver === userPhone && res.chat.unread === true);
+            const item = document.createElement('div');
+            item.className = 'chat-item';
+            item.onclick = () => openChat(res.cid, res.otherPhone, res.name, res.img);
+            item.innerHTML = `
+                <img src="${res.img}" loading="lazy" class="user-img-list" onerror="this.onerror=null;this.src='https://via.placeholder.com/50/ffffff/880e4f?text=%D8%B5%D9%88%D8%B1%D8%A9'">
+                <div class="chat-info">
+                    <span class="user-name">${res.name}</span>
+                    <span class="last-msg">${res.chat.lastMsg || 'اضغط لبدء الدردشة'}</span>
+                </div>
+                ${isUnread ? '<div class="unread-dot"></div>' : ''}
+            `;
+            list.appendChild(item);
+        });
+    });
+
+    function openChat(cid, otherPhone, name, img) {
+        activeChatId = cid;
+        activeReceiver = otherPhone;
+        document.getElementById('inboxView').style.display = 'none';
+        document.getElementById('chatView').style.display = 'flex';
+        
+        // تحديث الهيدر بالصورة والاسم
+        document.getElementById('headerTitle').innerText = name;
+        const hImg = document.getElementById('headerImg');
+        hImg.src = img;
+        hImg.style.display = 'block';
+
+        db.ref('chats/' + cid).once('value', s => {
+            if(s.val() && s.val().receiver === userPhone) db.ref('chats/' + cid).update({ unread: false });
+        });
+
+        db.ref('messages/' + cid).off();
+        db.ref('messages/' + cid).on('value', snap => {
+            const box = document.getElementById('msgBox');
+            box.innerHTML = '';
+            snap.forEach(m => {
+                const data = m.val();
+                const div = document.createElement('div');
+                div.className = `msg ${data.sender === userPhone ? 'sent' : 'received'}`;
+                div.innerText = data.text;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        });
+    }
+
+    function sendMsg() {
+        const input = document.getElementById('mInput');
+        const text = input.value.trim();
+        if (!text || !activeChatId) return;
+        db.ref('messages/' + activeChatId).push({ sender: userPhone, text: text, time: Date.now() });
+        db.ref('chats/' + activeChatId).update({ lastMsg: text, receiver: activeReceiver, unread: true, lastTime: Date.now() });
+        input.value = '';
+    }
+
+    function goBack() {
+        if (document.getElementById('chatView').style.display === 'flex') {
+            document.getElementById('chatView').style.display = 'none';
+            document.getElementById('inboxView').style.display = 'block';
+            document.getElementById('headerImg').style.display = 'none';
+            document.getElementById('headerTitle').innerText = 'رسائلي';
+        } else {
+            location.href = 'index.html';
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - كوزمتك</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root {
+            --pink: #880e4f;
+            --purple: #5b2563;
+            --bg: #f7f2fb;
+            --surface: #ffffff;
+            --border: rgba(136, 14, 79, 0.1);
+            --text: #27233b;
+            --muted: #6d6a75;
+        }
+        * {
+            font-family: 'Cairo', sans-serif;
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, rgba(136,14,79,0.14), transparent 28%),
+                        linear-gradient(180deg, #f7f2fb 0%, #fcfbff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: var(--text);
+        }
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            background: var(--surface);
+            padding: 36px 32px;
+            border-radius: 32px;
+            box-shadow: 0 30px 80px rgba(69, 40, 82, 0.12);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .login-title {
+            margin: 0 0 8px;
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 0.2px;
+        }
+        .login-subtitle {
+            margin: 0 0 28px;
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .avatar-upload {
+            width: 114px;
+            height: 114px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, rgba(136,14,79,0.12), rgba(255,255,255,0.95));
+            margin: 0 auto 22px;
+            position: relative;
+            cursor: pointer;
+            border: 4px solid rgba(255,255,255,0.92);
+            box-shadow: 0 20px 40px rgba(136, 14, 79, 0.12);
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+        }
+        .avatar-upload img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-label {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            color: var(--purple);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        }
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 16px;
+        }
+        input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 16px;
+            border: 1px solid #e4dfea;
+            background: #fbf8ff;
+            color: var(--text);
+            font-size: 15px;
+            text-align: center;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+        input:focus {
+            border-color: rgba(136,14,79,0.25);
+            box-shadow: 0 0 0 4px rgba(136,14,79,0.08);
+        }
+        .btn-start {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--pink), var(--purple));
+            color: white;
+            border: none;
+            border-radius: 18px;
+            font-weight: 900;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 18px 40px rgba(136, 14, 79, 0.2);
+        }
+        .btn-start:hover {
+            transform: translateY(-1px);
+        }
+        @media (max-width: 480px) {
+            .login-box { padding: 28px 20px; }
+            .login-title { font-size: 24px; }
+            .avatar-upload { width: 104px; height: 104px; }
+            .avatar-label { font-size: 11px; padding: 6px 10px; }
+            input { padding: 14px 16px; }
+            .btn-start { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2 class="login-title">أهلاً بك في كوزمتك</h2>
+    <p class="login-subtitle">سجل بياناتك بسرعة وابدأ في إدارة متجرك الآن.</p>
+
+    <div class="avatar-upload" onclick="document.getElementById('fileInput').click()">
+        <img id="preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
+        <div class="avatar-label">إضافة صورة</div>
+        <input type="file" id="fileInput" hidden accept="image/*" onchange="previewImg(this)">
+    </div>
+
+    <div class="field-group">
+        <input type="text" id="userName" placeholder="اسم المستخدم">
+        <input type="tel" id="userPhone" placeholder="رقم الموبايل (مثلاً 078...)">
+    </div>
+
+    <button class="btn-start" id="btnGo" onclick="startApp()">ابدأ الآن</button>
+</div>
+
+<script>
+    const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    function previewImg(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const preview = document.getElementById('preview');
+                preview.src = e.target.result;
+                preview.dataset.uploaded = 'true';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    async function startApp() {
+        const name = document.getElementById('userName').value.trim();
+        const phone = document.getElementById('userPhone').value.trim();
+        const preview = document.getElementById('preview');
+        const img = preview.dataset.uploaded === 'true' ? preview.src : '';
+
+        if (!name || !phone) {
+            return alert("يرجى ملء جميع الحقول");
+        }
+
+        const btn = document.getElementById('btnGo');
+        btn.innerText = "جاري تسجيل الدخول...";
+        btn.disabled = true;
+
+        const userData = { name, phone, img, joinedAt: Date.now() };
+
+        try {
+            await db.ref('users/' + phone).set(userData);
+            localStorage.setItem('app_user_phone', phone);
+            localStorage.setItem('alfaham_profile', JSON.stringify(userData));
+            location.href = 'index.html';
+        } catch (error) {
+            console.error(error);
+            btn.innerText = "ابدأ الآن";
+            btn.disabled = false;
+            alert("حدث خطأ أثناء تسجيل الدخول، يرجى المحاولة مجدداً");
+        }
+    }
+</script>
+</body>
+</html>
