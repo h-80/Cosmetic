@@ -104,45 +104,41 @@
             width: 46px;
             height: 46px;
             border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.28);
+            border: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255,255,255,0.14);
+            background: transparent;
             color: white;
             cursor: pointer;
             font-size: 18px;
-            transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-            backdrop-filter: blur(10px);
+            transition: transform .2s ease, opacity .2s ease;
+            box-shadow: none;
+            padding: 0;
         }
         .add-btn {
             width: 46px;
             height: 46px;
             border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.28);
+            border: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255,255,255,0.18);
+            background: transparent;
             color: white;
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700;
             cursor: pointer;
-            transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-            backdrop-filter: blur(10px);
+            transition: transform .2s ease, opacity .2s ease;
+            box-shadow: none;
             padding: 0;
         }
         .icon-btn:hover,
         .add-btn:hover {
-            background: rgba(255,255,255,0.28);
+            background: rgba(255,255,255,0.08);
             transform: translateY(-1px);
-            border-color: rgba(255,255,255,0.45);
-            box-shadow: 0 10px 24px rgba(0,0,0,0.12);
         }
         .modal-close {
-            position: absolute;
             top: 16px;
             left: 16px;
             width: 38px;
@@ -750,6 +746,17 @@
         throw new Error('المستخدم غير مسجل الدخول');
     }
 
+    function normalizePhone(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
+
+    function makeChatId(a, b) {
+        const p1 = normalizePhone(a);
+        const p2 = normalizePhone(b);
+        if (!p1 || !p2) return '';
+        return p1 < p2 ? `${p1}_${p2}` : `${p2}_${p1}`;
+    }
+
     const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(config);
     const db = firebase.database();
@@ -854,9 +861,10 @@
     // مراقبة الرسائل الجديدة للتنبيه
     db.ref('chats').on('value', snap => {
         let hasNew = false;
+        const normalizedUserPhone = normalizePhone(userPhone);
         snap.forEach(child => {
             const chat = child.val();
-            if (chat.receiver === userPhone && chat.unread === true) hasNew = true;
+            if (normalizePhone(chat.receiver) === normalizedUserPhone && chat.unread === true) hasNew = true;
         });
         document.getElementById('msgDot').style.display = hasNew ? 'block' : 'none';
     });
@@ -993,7 +1001,8 @@
             linkSocial.onclick = function(e) {
                 e.preventDefault();
                 if (!canChat) return;
-                const chatId = userPhone < chatTarget ? userPhone + "_" + chatTarget : chatTarget + "_" + userPhone;
+                const chatId = makeChatId(userPhone, chatTarget);
+                if (!chatId) return;
                 db.ref('chats/' + chatId).update({ receiver: chatTarget, unread: true });
                 location.href = `chat.html?chatId=${chatId}&receiver=${chatTarget}`;
             };

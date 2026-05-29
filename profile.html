@@ -304,6 +304,17 @@
         const db = firebase.database();
 
         const myPhone = localStorage.getItem('app_user_phone');
+
+        function normalizePhone(value) {
+            return String(value || '').replace(/\D/g, '');
+        }
+
+        function makeChatId(a, b) {
+            const p1 = normalizePhone(a);
+            const p2 = normalizePhone(b);
+            if (!p1 || !p2) return '';
+            return p1 < p2 ? `${p1}_${p2}` : `${p2}_${p1}`;
+        }
         const urlParams = new URLSearchParams(window.location.search);
         // إذا وجد رقم في الرابط يعرضه، وإلا يعرض حسابي الشخصي
         const targetUser = urlParams.get('id') || myPhone;
@@ -373,7 +384,8 @@
         };
 
         function goToChat() {
-            const chatId = myPhone < targetUser ? myPhone + "_" + targetUser : targetUser + "_" + myPhone;
+            const chatId = makeChatId(myPhone, targetUser);
+            if (!chatId) return;
             location.href = `chat.html?chatId=${chatId}&receiver=${targetUser}`;
         }
 

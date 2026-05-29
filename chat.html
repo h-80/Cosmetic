@@ -93,7 +93,14 @@
         msgInput.addEventListener('focus', scrollToBottomSoon);
         window.addEventListener('resize', scrollToBottomSoon);
 
-        document.getElementById('attachFile').addEventListener('change', function(){ if(this.files && this.files[0]) { alert('اختيار ملف مبدئي - لم يتم رفعه (واجهة)'); } });
+        const attachInput = document.getElementById('attachFile');
+        if (attachInput) {
+            attachInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    alert('اختيار ملف مبدئي - لم يتم رفعه (واجهة)');
+                }
+            });
+        }
     </script>
 </body>
 </html>
