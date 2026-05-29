@@ -35,15 +35,15 @@
         }
         .header-inner {
             display: flex;
-            flex-flow: row nowrap;
+            flex-flow: row wrap;
             justify-content: space-between;
             align-items: center;
             gap: 12px;
             min-height: 66px;
-            overflow-x: auto;
+            overflow-x: hidden;
             scroll-behavior: smooth;
         }
-        .header-actions { order: 2; min-width: 0; overflow-x: auto; scroll-behavior: smooth; }
+        .header-actions { order: 2; min-width: 0; overflow-x: hidden; scroll-behavior: smooth; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: flex-end; }
         .header-actions input {
             width: 220px;
             max-width: 220px;
@@ -55,6 +55,7 @@
             background: rgba(255,255,255,0.12);
             color: white;
             font-size: 14px;
+            min-width: 0;
         }
         .brand { order: 1; }
         .brand {
@@ -170,9 +171,10 @@
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            object-fit: cover;
+            object-fit: contain;
             border: 1px solid rgba(255,255,255,0.3);
             background: white;
+            padding: 4px;
         }
         .header-actions .icon-label {
             display: none;
@@ -390,19 +392,47 @@
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
-                overflow-x: auto;
+                overflow-x: hidden;
+                flex-wrap: nowrap;
             }
             .header-actions {
                 width: auto;
                 justify-content: flex-start;
-                flex: 1;
+                flex: 1 1 auto;
+                min-width: 0;
+                gap: 6px;
             }
             .header-actions input {
-                width: 140px;
-                max-width: 140px;
+                width: 100px;
+                max-width: 100px;
+                min-width: 0;
+                flex: 0 0 auto;
+            }
+            .icon-btn,
+            .add-btn {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                padding: 0;
+                background: rgba(255,255,255,0.18);
+                box-shadow: none;
+                border-color: rgba(255,255,255,0.18);
+            }
+            .icon-btn img,
+            .add-btn img {
+                width: 20px;
+                height: 20px;
             }
             .brand {
-                flex-shrink: 0;
+                flex-shrink: 1;
+                min-width: 0;
+            }
+            .brand-logo {
+                width: 40px;
+                height: 40px;
+            }
+            .brand-text strong {
+                font-size: 16px;
             }
             .card-actions {
                 flex-direction: column;
@@ -952,8 +982,8 @@
                     ownerNameElem.innerText = `البائع: ${ownerName}`;
                     ownerAvatar.src = ownerData.img || 'https://via.placeholder.com/150/ffffff/880e4f?text=ص';
                     ownerProfileLink.href = profileHref;
-                    ownerProfileLink.target = '_blank';
-                    ownerProfileLink.rel = 'noopener noreferrer';
+                    ownerProfileLink.removeAttribute('target');
+                    ownerProfileLink.removeAttribute('rel');
                     ownerProfileLink.style.display = 'inline-flex';
                 });
             } else {
@@ -969,13 +999,25 @@
             };
 
             document.getElementById('detailsScreen').style.display = 'block';
-            window.history.pushState({p:1}, '');
+            window.location.hash = `product=${encodeURIComponent(id)}`;
         });
     }
 
     function closeDetails() {
         document.getElementById('detailsScreen').style.display = 'none';
-        window.history.back();
+        if (window.location.hash.startsWith('#product=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        } else {
+            window.history.back();
+        }
+    }
+
+    function restoreDetailsFromHash() {
+        const hash = window.location.hash || '';
+        const match = hash.match(/^#product=(.+)/);
+        if (match && match[1]) {
+            openDetails(decodeURIComponent(match[1]));
+        }
     }
 
     function openPop(id = null) {
@@ -1021,6 +1063,8 @@
         document.querySelectorAll('.modal, #detailsScreen').forEach(m => m.style.display='none');
         document.body.style.overflow = 'auto';
     };
+
+    window.addEventListener('load', restoreDetailsFromHash);
 
     function previewFile(i) {
         const files = Array.from(i.files || []);

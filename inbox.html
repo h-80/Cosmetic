@@ -68,6 +68,7 @@
 
 <script>
     const userPhone = localStorage.getItem('app_user_phone');
+    const normalizedUserPhone = String(userPhone || '').replace(/\D/g, '');
     const config = { databaseURL: "https://cosmetic-1980-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(config);
     const db = firebase.database();
@@ -76,6 +77,10 @@
     let activeReceiver = null;
 
     if (!userPhone) location.href = 'login.html';
+
+    function normalizePhone(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
 
     // دالة لجلب بيانات المستخدم (الاسم والصورة)
     async function getUserData(phone) {
@@ -88,23 +93,45 @@
     }
 
     // جلب قائمة المحادثات
+    function getChatParts(cid) {
+        const parts = cid.split(/[_-]/).map(p => p.trim()).filter(Boolean);
+        return parts.length === 2 ? parts : [];
+    }
+
     db.ref('chats').on('value', async snap => {
         const list = document.getElementById('listContent');
         list.innerHTML = '';
+        const normalizedUserPhone = String(userPhone || '').replace(/\D/g, '');
         const promises = [];
 
         snap.forEach(child => {
-            const chat = child.val();
+            const chat = child.val() || {};
             const cid = child.key;
-            if (cid.includes(userPhone)) {
-                const otherPhone = cid.split('_').find(p => p !== userPhone);
-                promises.push(getUserData(otherPhone).then(user => ({ ...user, chat, cid, otherPhone })));
+            const parts = getChatParts(cid);
+            const senderPhone = normalizePhone(chat.sender);
+            const receiverPhone = normalizePhone(chat.receiver);
+            const hasPhoneInId = parts.some(p => normalizePhone(p) === normalizedUserPhone);
+            const isParticipant = hasPhoneInId || senderPhone === normalizedUserPhone || receiverPhone === normalizedUserPhone;
+            if (!isParticipant) return;
+            let otherPhone = parts.find(p => normalizePhone(p) !== normalizedUserPhone);
+            if (!otherPhone) {
+                if (senderPhone && senderPhone !== normalizedUserPhone) otherPhone = chat.sender;
+                else if (receiverPhone && receiverPhone !== normalizedUserPhone) otherPhone = chat.receiver;
             }
+            if (!otherPhone) return;
+            promises.push(getUserData(otherPhone).then(user => ({ ...user, chat, cid, otherPhone })));
         });
 
         const results = await Promise.all(promises);
+        if (!results.length) {
+            list.innerHTML = '<div style="padding: 24px; color:#555; text-align:center;">لا توجد محادثات حتى الآن.</div>';
+            return;
+        }
+
+        results.sort((a, b) => (b.chat.lastTime || 0) - (a.chat.lastTime || 0));
         results.forEach(res => {
-            const isUnread = (res.chat.receiver === userPhone && res.chat.unread === true);
+            const normalizedReceiver = normalizePhone(res.chat.receiver);
+            const isUnread = (normalizedReceiver === normalizedUserPhone && res.chat.unread === true);
             const item = document.createElement('div');
             item.className = 'chat-item';
             item.onclick = () => openChat(res.cid, res.otherPhone, res.name, res.img);
@@ -133,20 +160,27 @@
         hImg.style.display = 'block';
 
         db.ref('chats/' + cid).once('value', s => {
-            if(s.val() && s.val().receiver === userPhone) db.ref('chats/' + cid).update({ unread: false });
+            if (s.val() && normalizePhone(s.val().receiver) === normalizedUserPhone) db.ref('chats/' + cid).update({ unread: false });
         });
 
         db.ref('messages/' + cid).off();
         db.ref('messages/' + cid).on('value', snap => {
             const box = document.getElementById('msgBox');
             box.innerHTML = '';
+            let hasMessage = false;
             snap.forEach(m => {
                 const data = m.val();
+                const senderPhone = normalizePhone(data.sender);
+                const text = data.text || data.msg || data.message || '';
                 const div = document.createElement('div');
-                div.className = `msg ${data.sender === userPhone ? 'sent' : 'received'}`;
-                div.innerText = data.text;
+                div.className = `msg ${senderPhone === normalizedUserPhone ? 'sent' : 'received'}`;
+                div.innerText = text;
                 box.appendChild(div);
+                hasMessage = true;
             });
+            if (!hasMessage) {
+                box.innerHTML = '<div style="padding: 24px; color:#555; text-align:center;">لا توجد رسائل بعد.</div>';
+            }
             box.scrollTop = box.scrollHeight;
         });
     }
@@ -173,3 +207,9 @@
 </script>
 </body>
 </html>
+
+
+
+
+
+
